@@ -29,20 +29,20 @@
         @keyframes riseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         .rise-in { animation: riseIn .3s ease-out both; }
 
-        /* Toast Animation Rata Tengah Presisi */
+        /* Toast Animation Tepat di Tengah-Tengah Layar */
         #toast {
             position: fixed;
-            bottom: 24px;
+            top: 50%;
             left: 50%;
-            transform: translate(-50%, 20px) scale(0.95);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+            transform: translate(-50%, -50%) scale(0.85);
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.25s ease;
             opacity: 0;
             z-index: 9999;
             pointer-events: none;
         }
         #toast.show {
             opacity: 1;
-            transform: translate(-50%, 0) scale(1);
+            transform: translate(-50%, -50%) scale(1);
         }
     </style>
 </head>
@@ -150,8 +150,8 @@
         </div>
     </div>
 
-    <!-- TOAST NOTIFICATION FLOATING (RATA TENGAH FIX) -->
-    <div id="toast" class="px-4 py-2 rounded-xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2">
+    <!-- TOAST NOTIFICATION FLOATING (TENTANG LAYAR FIX) -->
+    <div id="toast" class="px-5 py-3 rounded-2xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2 text-sm">
         <span id="toastIcon"></span>
         <span id="toastText"></span>
     </div>
@@ -189,7 +189,7 @@
             loadData();
         };
 
-        // Fungsi Tampil Toast Rata Tengah
+        // Fungsi Tampil Toast di Tengah Layar
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             const icon = document.getElementById('toastIcon');
@@ -201,15 +201,15 @@
 
             if (type === 'success') {
                 icon.innerText = '✓';
-                toast.className = "px-4 py-2 rounded-xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2 bg-emerald-500/20 border-emerald-500/40 text-emerald-300 show";
+                toast.className = "px-5 py-3 rounded-2xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2 bg-emerald-500/20 border-emerald-500/40 text-emerald-300 show";
             } else {
                 icon.innerText = '✕';
-                toast.className = "px-4 py-2 rounded-xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2 bg-rose-500/20 border-rose-500/40 text-rose-300 show";
+                toast.className = "px-5 py-3 rounded-2xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2 bg-rose-500/20 border-rose-500/40 text-rose-300 show";
             }
 
             toastTimeout = setTimeout(() => {
                 toast.classList.remove('show');
-            }, 2000);
+            }, 1800);
         }
 
         function handlePeminjamInput(input) {
