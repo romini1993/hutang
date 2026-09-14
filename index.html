@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Catatan Hutang Receh</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <style>
+        html, body { width: 100%; min-height: 100vh; margin: 0; background: #090a10; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+        .font-display { font-family: 'Space Grotesk', sans-serif; }
+        .num { font-family: 'Space Grotesk', sans-serif; font-variant-numeric: tabular-nums; }
+        .porto-card { background: #10121d; border: 1px solid #1e2235; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
+        .porto-input { background: #090a10; border: 1px solid #23273c; color: #f1f5f9; }
+        .porto-input:focus { border-color: #f43f5e; outline: none; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #23273c; border-radius: 8px; }
+    </style>
+</head>
+<body class="p-3 md:p-6 flex justify-center">
+    <div class="w-full max-w-[1600px] grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        
+        <!-- KOLOM KIRI: Header & Form -->
+        <div class="lg:col-span-4 space-y-5 lg:sticky lg:top-6">
+            <div class="porto-card p-5 rounded-2xl flex items-center gap-3 border-l-4 border-l-rose-500">
+                <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 font-bold text-xl">
+                    💸
+                </div>
+                <div>
+                    <h1 class="font-display text-xl font-bold text-white">HUTANG RECEH</h1>
+                    <p class="text-xs text-slate-400">Catatan Pinjaman & Kas</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div class="porto-card p-4 rounded-xl text-center">
+                    <div class="text-[10px] uppercase font-semibold text-slate-400 mb-1">Total Hutang</div>
+                    <div id="statTotalHutang" class="num text-base font-bold text-rose-400">Rp 0</div>
+                </div>
+                <div class="porto-card p-4 rounded-xl text-center">
+                    <div class="text-[10px] uppercase font-semibold text-slate-400 mb-1">Jumlah Catatan</div>
+                    <div id="statCount" class="num text-base font-bold text-slate-200">0</div>
+                </div>
+            </div>
+
+            <form id="hutangForm" onsubmit="handleSubmit(event)" class="porto-card p-5 rounded-2xl space-y-4">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400">Input Pinjaman Baru</h2>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Tanggal</label>
+                    <input type="text" id="tanggal" required class="w-full porto-input rounded-xl px-3.5 py-2.5">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Keterangan / Keperluan</label>
+                    <input type="text" id="keterangan" required placeholder="Contoh: Pinjam 50rb kopi" class="w-full porto-input rounded-xl px-3.5 py-2.5">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Nominal (Rp)</label>
+                    <input type="number" id="nominal" required placeholder="50000" class="w-full porto-input rounded-xl px-3.5 py-2.5 num">
+                </div>
+                <button type="submit" id="submitBtn" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-rose-600/20">
+                    Simpan Catatan
+                </button>
+            </form>
+        </div>
+
+        <!-- KOLOM TENGAH: Rekap -->
+        <div class="lg:col-span-4 space-y-4 lg:sticky lg:top-6">
+            <div class="porto-card p-5 rounded-2xl space-y-3">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400 mb-2">Ringkasan</h2>
+                <div id="summaryBox" class="text-xs text-slate-300 space-y-2"></div>
+            </div>
+        </div>
+
+        <!-- KOLOM KANAN: Daftar Riwayat -->
+        <div class="lg:col-span-4 space-y-4 lg:sticky lg:top-6">
+            <div class="porto-card p-5 rounded-2xl space-y-3">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400 mb-2">Daftar Pinjaman</h2>
+                <div id="loading" class="text-center text-xs text-slate-500 py-6">Memuat data dari Sheet...</div>
+                <div id="hutangList" class="space-y-2 max-h-[calc(100vh-140px)] overflow-y-auto pr-1 custom-scroll"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // PASTE URL WEB APP DARI APPS SCRIPT DI SINI
+        const API_URL = "https://script.google.com/macros/s/AKfycbzFDDLFAnahJ7lETXrLTQQApqvQDHCTePOWZUt5ppYYSYDcT9eNk2aZKzCxoINXun7x/exec";
+
+        flatpickr("#tanggal", { dateFormat: "d/m/Y", defaultDate: "today" });
+
+        window.onload = loadData;
+
+        function formatRupiah(val) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
+        }
+
+        function loadData() {
+            document.getElementById('loading').style.display = 'block';
+            fetch(API_URL + "?action=read")
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('loading').style.display = 'none';
+                    renderData(data);
+                })
+                .catch(() => {
+                    document.getElementById('loading').innerText = "Gagal memuat data.";
+                });
+        }
+
+        function renderData(data) {
+            const listEl = document.getElementById('hutangList');
+            const summaryEl = document.getElementById('summaryBox');
+            listEl.innerHTML = '';
+            
+            let total = 0;
+            data.forEach(item => {
+                total += parseFloat(item.nominal || 0);
+                
+                const card = document.createElement('div');
+                card.className = "p-3 bg-[#090a10] border border-[#23273c] rounded-xl flex justify-between items-center";
+                card.innerHTML = `
+                    <div>
+                        <div class="text-xs text-slate-400">${item.tanggal}</div>
+                        <div class="text-sm font-semibold text-white">${item.keterangan}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="num font-bold text-rose-400">${formatRupiah(item.nominal)}</div>
+                        <button onclick="handleHapus(${item.no})" class="text-[10px] bg-rose-600/20 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded mt-1 hover:bg-rose-600/40">Lunas / Hapus</button>
+                    </div>
+                `;
+                listEl.appendChild(card);
+            });
+
+            document.getElementById('statTotalHutang').innerText = formatRupiah(total);
+            document.getElementById('statCount').innerText = data.length;
+            summaryEl.innerHTML = `<div class="p-3 bg-[#090a10] rounded-xl border border-[#23273c]">Akumulasi pinjaman belum lunas: <br><b class="text-rose-400 text-sm">${formatRupiah(total)}</b></div>`;
+        }
+
+        function handleSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerText = "Menyimpan...";
+
+            const tgl = encodeURIComponent(document.getElementById('tanggal').value);
+            const ket = encodeURIComponent(document.getElementById('keterangan').value);
+            const nom = encodeURIComponent(document.getElementById('nominal').value);
+
+            fetch(`${API_URL}?action=add&tanggal=${tgl}&keterangan=${ket}&nominal=${nom}`)
+                .then(() => {
+                    btn.disabled = false;
+                    btn.innerText = "Simpan Catatan";
+                    document.getElementById('keterangan').value = '';
+                    document.getElementById('nominal').value = '';
+                    loadData();
+                });
+        }
+
+        function handleHapus(no) {
+            if (confirm("Tandai pinjaman No #" + no + " ini sudah lunas/hapus?")) {
+                fetch(`${API_URL}?action=delete&no=${no}`)
+                    .then(() => loadData());
+            }
+        }
+    </script>
+</body>
+</html>
