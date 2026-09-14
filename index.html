@@ -98,6 +98,21 @@
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
         }
 
+        // Fungsi rapihin tanggal ISO ke format dd/mm/yyyy
+        function cleanTanggal(tglStr) {
+            if (!tglStr) return '-';
+            if (tglStr.includes('T')) {
+                const d = new Date(tglStr);
+                if (!isNaN(d.getTime())) {
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const year = d.getFullYear();
+                    return `${day}/${month}/${year}`;
+                }
+            }
+            return tglStr;
+        }
+
         function loadData() {
             document.getElementById('loading').style.display = 'block';
             fetch(API_URL + "?action=read")
@@ -134,7 +149,7 @@
                 card.className = "p-3 bg-[#090a10] border border-[#23273c] rounded-xl flex justify-between items-center";
                 card.innerHTML = `
                     <div>
-                        <div class="text-xs text-slate-400">${item.tanggal} • <span class="text-rose-400 font-medium">${item.via || '-'}</span></div>
+                        <div class="text-xs text-slate-400">${cleanTanggal(item.tanggal)} • <span class="text-rose-400 font-medium">${item.via || '-'}</span></div>
                         <div class="text-sm font-semibold text-white">${item.peminjam || '-'}</div>
                     </div>
                     <div class="text-right">
