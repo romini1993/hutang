@@ -65,11 +65,12 @@
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Siapa yang Pinjam</label>
-                    <input type="text" id="peminjam" required placeholder="Contoh: Gua / Nama Teman" class="w-full porto-input rounded-xl px-3.5 py-2.5">
+                    <!-- Input Peminjam Otomatis Huruf Besar Semua -->
+                    <input type="text" id="peminjam" required placeholder="Contoh: GUA / DODI" oninput="handlePeminjamInput(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 uppercase font-medium">
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Via / Pembayaran</label>
-                    <!-- Container Ghost Text Autocomplete -->
+                    <!-- Container Ghost Text Autocomplete dengan Auto-Capitalize -->
                     <div class="relative w-full">
                         <div id="ghostVia" class="absolute inset-0 px-3.5 py-2.5 pointer-events-none text-slate-500 font-medium whitespace-pre overflow-hidden"></div>
                         <input type="text" id="via" required placeholder="Contoh: Seabank, Dana, BCA, Cash" 
@@ -140,7 +141,6 @@
         const API_URL = "https://script.google.com/macros/s/AKfycbzFDDLFAnahJ7lETXrLTQQApqvQDHCTePOWZUt5ppYYSYDcT9eNk2aZKzCxoINXun7x/exec";
         const LOCAL_STORAGE_KEY = "hutang_cached_data";
 
-        // Opsi Autocomplete Via
         const VIA_OPTIONS = ["Seabank", "Dana", "BCA", "Cash", "GoPay", "OVO", "Mandiri", "BRI", "ShopeePay"];
 
         let globalData = [];
@@ -169,19 +169,32 @@
             loadData();
         };
 
-        // Logika Inline Ghost Text Autocomplete
+        // Peminjam Otomatis BESAR SEMUA
+        function handlePeminjamInput(input) {
+            input.value = input.value.toUpperCase();
+        }
+
+        // Helper Capitalize Tiap Kata (Huruf Depan Kapital)
+        function capitalizeWords(str) {
+            return str.replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        // Logika Ghost Text Autocomplete
         function handleViaInput(input) {
-            const val = input.value;
+            let val = input.value;
             const ghost = document.getElementById('ghostVia');
             currentSuggestion = "";
 
             if (val.trim() !== "") {
+                // Otomatis bikin huruf depan kapital
+                val = capitalizeWords(val);
+                input.value = val;
+
                 const match = VIA_OPTIONS.find(opt => opt.toLowerCase().startsWith(val.toLowerCase()));
                 if (match) {
                     currentSuggestion = match;
                     const typedPart = val;
                     const ghostPart = match.slice(typedPart.length);
-                    // Bagian yang diketik transparan, sisa kata warna abu-abu
                     ghost.innerHTML = `<span class="opacity-0">${typedPart}</span><span>${ghostPart}</span>`;
                     return;
                 }
@@ -190,7 +203,6 @@
         }
 
         function handleViaKeyDown(e, input) {
-            // Tekan Tab, Enter, atau Panah Kanan untuk terima saran
             if ((e.key === 'Tab' || e.key === 'Enter' || e.key === 'ArrowRight') && currentSuggestion) {
                 if (input.value.toLowerCase() !== currentSuggestion.toLowerCase()) {
                     e.preventDefault();
@@ -204,6 +216,8 @@
         function acceptViaSuggestion(input) {
             if (currentSuggestion && input.value.trim() !== "") {
                 input.value = currentSuggestion;
+            } else if (input.value.trim() !== "") {
+                input.value = capitalizeWords(input.value);
             }
             document.getElementById('ghostVia').innerHTML = "";
             currentSuggestion = "";
