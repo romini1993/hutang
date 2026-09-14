@@ -28,9 +28,22 @@
         .custom-scroll::-webkit-scrollbar-thumb { background: #23273c; border-radius: 8px; }
         @keyframes riseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         .rise-in { animation: riseIn .3s ease-out both; }
+
+        /* Toast Animation (Floating Bottom) */
+        #toast {
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+        }
+        #toast.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        #toast.hide {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+        }
     </style>
 </head>
-<body class="p-3 md:p-6 flex justify-center">
+<body class="p-3 md:p-6 flex justify-center pb-20">
     <div class="w-full max-w-[1600px] grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         
         <!-- KOLOM KIRI: Header & Form -->
@@ -134,6 +147,12 @@
         </div>
     </div>
 
+    <!-- TOAST NOTIFICATION FLOATING -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2 pointer-events-none hide">
+        <span id="toastIcon"></span>
+        <span id="toastText"></span>
+    </div>
+
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbzFDDLFAnahJ7lETXrLTQQApqvQDHCTePOWZUt5ppYYSYDcT9eNk2aZKzCxoINXun7x/exec";
         const LOCAL_STORAGE_KEY = "hutang_cached_data";
@@ -144,6 +163,7 @@
         let selectedFilterName = null;
         let deleteTargetNo = null;
         let currentSuggestion = "";
+        let toastTimeout = null;
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -165,6 +185,30 @@
             }
             loadData();
         };
+
+        // Fungsi Tampil Toast Notifikasi Hilang Sendiri
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            const text = document.getElementById('toastText');
+
+            if (toastTimeout) clearTimeout(toastTimeout);
+
+            text.innerText = message;
+
+            if (type === 'success') {
+                icon.innerText = '✓';
+                toast.className = "fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2 pointer-events-none bg-emerald-500/20 border-emerald-500/40 text-emerald-300 show";
+            } else {
+                icon.innerText = '✕';
+                toast.className = "fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2 pointer-events-none bg-rose-500/20 border-rose-500/40 text-rose-300 show";
+            }
+
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+                toast.classList.add('hide');
+            }, 2000);
+        }
 
         function handlePeminjamInput(input) {
             input.value = input.value.toUpperCase();
@@ -353,7 +397,7 @@
             });
         }
 
-        // OPTIMISTIC UPDATE: SIMPAN TANPA TUNGGU SERVER
+        // Simpan Data & Panggil Toast Hijau "Tersimpan"
         function handleSubmit(e) {
             e.preventDefault();
             const tgl = document.getElementById('tanggal').value;
@@ -366,7 +410,6 @@
             let rawNominal = isNegative ? '-' + cleanVal : cleanVal;
             const nomNum = parseFloat(rawNominal || 0);
 
-            // 1. Buat Objek Data Baru Sementara
             const newItem = {
                 no: globalData.length + 1,
                 tanggal: tgl,
@@ -375,17 +418,17 @@
                 nominal: nomNum
             };
 
-            // 2. Langsung Masukkan ke Tampilan & Lokal Storage
             globalData.push(newItem);
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(globalData));
             renderData();
 
-            // 3. Reset Form Input Seketika
+            // Panggil Toast Hijau
+            showToast("Tersimpan", "success");
+
             document.getElementById('peminjam').value = '';
             document.getElementById('via').value = '';
             document.getElementById('nominal').value = '';
 
-            // 4. Kirim Data ke Google Sheet di Latar Belakang (Tanpa Loading UI)
             const encTgl = encodeURIComponent(tgl);
             const encPeminjam = encodeURIComponent(peminjam);
             const encVia = encodeURIComponent(via);
@@ -423,18 +466,19 @@
             }
         });
 
-        // OPTIMISTIC UPDATE: HAPUS TANPA TUNGGU SERVER
+        // Hapus Data & Panggil Toast Merah "Terhapus"
         document.getElementById('confirmDeleteBtn').onclick = function() {
             if (deleteTargetNo !== null) {
                 const targetNo = deleteTargetNo;
                 closeDeleteModal();
 
-                // 1. Langsung Hapus dari Tampilan & Lokal Storage Seketika
                 globalData = globalData.filter(item => item.no !== targetNo);
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(globalData));
                 renderData();
 
-                // 2. Kirim Perintah Hapus ke Server di Latar Belakang
+                // Panggil Toast Merah
+                showToast("Terhapus", "error");
+
                 fetch(`${API_URL}?action=delete&no=${targetNo}`)
                     .then(() => loadData());
             }
