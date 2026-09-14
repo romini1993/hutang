@@ -65,12 +65,10 @@
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Siapa yang Pinjam</label>
-                    <!-- Input Peminjam Otomatis Huruf Besar Semua -->
                     <input type="text" id="peminjam" required placeholder="Contoh: GUA / DODI" oninput="handlePeminjamInput(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 uppercase font-medium">
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Via / Pembayaran</label>
-                    <!-- Container Ghost Text Autocomplete dengan Auto-Capitalize -->
                     <div class="relative w-full">
                         <div id="ghostVia" class="absolute inset-0 px-3.5 py-2.5 pointer-events-none text-slate-500 font-medium whitespace-pre overflow-hidden"></div>
                         <input type="text" id="via" required placeholder="Contoh: Seabank, Dana, BCA, Cash" 
@@ -82,7 +80,8 @@
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Nominal (Rp) <span class="text-[10px] text-slate-500">(pakai - untuk cicil/bayar)</span></label>
-                    <input type="text" id="nominal" required placeholder="50.000 atau -20.000" oninput="formatInputRibuan(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 num">
+                    <!-- KEYBOARD ANGKA KUSTOM: inputmode="decimal" -->
+                    <input type="text" id="nominal" inputmode="decimal" required placeholder="50.000 atau -20.000" oninput="formatInputRibuan(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 num">
                 </div>
                 <button type="submit" id="submitBtn" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-rose-600/20">
                     Simpan Catatan
@@ -169,24 +168,20 @@
             loadData();
         };
 
-        // Peminjam Otomatis BESAR SEMUA
         function handlePeminjamInput(input) {
             input.value = input.value.toUpperCase();
         }
 
-        // Helper Capitalize Tiap Kata (Huruf Depan Kapital)
         function capitalizeWords(str) {
             return str.replace(/\b\w/g, l => l.toUpperCase());
         }
 
-        // Logika Ghost Text Autocomplete
         function handleViaInput(input) {
             let val = input.value;
             const ghost = document.getElementById('ghostVia');
             currentSuggestion = "";
 
             if (val.trim() !== "") {
-                // Otomatis bikin huruf depan kapital
                 val = capitalizeWords(val);
                 input.value = val;
 
