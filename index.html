@@ -29,12 +29,12 @@
         @keyframes riseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         .rise-in { animation: riseIn .3s ease-out both; }
 
-        /* Toast Animation Tepat di Tengah-Tengah Layar */
+        /* Toast Animation Tepat di Tengah-Atas Layar */
         #toast {
             position: fixed;
-            top: 50%;
+            top: 24px;
             left: 50%;
-            transform: translate(-50%, -50%) scale(0.85);
+            transform: translate(-50%, -20px) scale(0.95);
             transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.25s ease;
             opacity: 0;
             z-index: 9999;
@@ -42,7 +42,7 @@
         }
         #toast.show {
             opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
+            transform: translate(-50%, 0) scale(1);
         }
     </style>
 </head>
@@ -150,8 +150,8 @@
         </div>
     </div>
 
-    <!-- TOAST NOTIFICATION FLOATING (TENTANG LAYAR FIX) -->
-    <div id="toast" class="px-5 py-3 rounded-2xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2 text-sm">
+    <!-- TOAST NOTIFICATION FLOATING (TENGAH-ATAS LAYAR) -->
+    <div id="toast" class="px-5 py-3 rounded-2xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2">
         <span id="toastIcon"></span>
         <span id="toastText"></span>
     </div>
@@ -189,7 +189,6 @@
             loadData();
         };
 
-        // Fungsi Tampil Toast di Tengah Layar
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             const icon = document.getElementById('toastIcon');
