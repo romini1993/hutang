@@ -52,8 +52,12 @@
                     <input type="text" id="tanggal" required class="w-full porto-input rounded-xl px-3.5 py-2.5">
                 </div>
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">Keterangan / Keperluan</label>
-                    <input type="text" id="keterangan" required placeholder="Contoh: Pinjam 50rb kopi" class="w-full porto-input rounded-xl px-3.5 py-2.5">
+                    <label class="block text-xs text-slate-400 mb-1">Siapa yang Pinjam</label>
+                    <input type="text" id="peminjam" required placeholder="Contoh: Gua / Nama Teman" class="w-full porto-input rounded-xl px-3.5 py-2.5">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Via / Pembayaran</label>
+                    <input type="text" id="via" required placeholder="Contoh: Cash, BCA, DANA, GoPay" class="w-full porto-input rounded-xl px-3.5 py-2.5">
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Nominal (Rp)</label>
@@ -84,7 +88,6 @@
     </div>
 
     <script>
-        // PASTE URL WEB APP DARI APPS SCRIPT DI SINI
         const API_URL = "https://script.google.com/macros/s/AKfycbzFDDLFAnahJ7lETXrLTQQApqvQDHCTePOWZUt5ppYYSYDcT9eNk2aZKzCxoINXun7x/exec";
 
         flatpickr("#tanggal", { dateFormat: "d/m/Y", defaultDate: "today" });
@@ -121,8 +124,8 @@
                 card.className = "p-3 bg-[#090a10] border border-[#23273c] rounded-xl flex justify-between items-center";
                 card.innerHTML = `
                     <div>
-                        <div class="text-xs text-slate-400">${item.tanggal}</div>
-                        <div class="text-sm font-semibold text-white">${item.keterangan}</div>
+                        <div class="text-xs text-slate-400">${item.tanggal} • <span class="text-rose-400 font-medium">${item.via || '-'}</span></div>
+                        <div class="text-sm font-semibold text-white">${item.peminjam || '-'}</div>
                     </div>
                     <div class="text-right">
                         <div class="num font-bold text-rose-400">${formatRupiah(item.nominal)}</div>
@@ -144,14 +147,16 @@
             btn.innerText = "Menyimpan...";
 
             const tgl = encodeURIComponent(document.getElementById('tanggal').value);
-            const ket = encodeURIComponent(document.getElementById('keterangan').value);
+            const peminjam = encodeURIComponent(document.getElementById('peminjam').value);
+            const via = encodeURIComponent(document.getElementById('via').value);
             const nom = encodeURIComponent(document.getElementById('nominal').value);
 
-            fetch(`${API_URL}?action=add&tanggal=${tgl}&keterangan=${ket}&nominal=${nom}`)
+            fetch(`${API_URL}?action=add&tanggal=${tgl}&peminjam=${peminjam}&via=${via}&nominal=${nom}`)
                 .then(() => {
                     btn.disabled = false;
                     btn.innerText = "Simpan Catatan";
-                    document.getElementById('keterangan').value = '';
+                    document.getElementById('peminjam').value = '';
+                    document.getElementById('via').value = '';
                     document.getElementById('nominal').value = '';
                     loadData();
                 });
