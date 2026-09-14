@@ -35,13 +35,14 @@
         
         <!-- KOLOM KIRI: Header & Form -->
         <div class="lg:col-span-4 space-y-5 lg:sticky lg:top-6">
-            <div class="porto-card p-5 rounded-2xl flex items-center gap-3 border-l-4 border-l-rose-500">
-                <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 font-bold text-xl">
+            <!-- Header Dikecilin (Compact Style) -->
+            <div class="porto-card px-4 py-3 rounded-xl flex items-center gap-2.5 border-l-4 border-l-rose-500">
+                <div class="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 font-bold text-base">
                     💸
                 </div>
                 <div>
-                    <h1 class="font-display text-xl font-bold text-white">CATATAN HUTANG</h1>
-                    <p class="text-xs text-slate-400">Catatan Pinjaman & Kas</p>
+                    <h1 class="font-display text-base font-bold text-white tracking-tight leading-none">CATATAN HUTANG</h1>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Catatan Pinjaman & Kas</p>
                 </div>
             </div>
 
@@ -100,13 +101,13 @@
                         🔄 Semua Nama
                     </button>
                 </div>
-                <div id="loading" class="text-center text-xs text-slate-500 py-6">Memuat data dari Sheet...</div>
+                <div id="loading" class="text-center text-xs text-slate-500 py-6 hidden">Memuat data dari Sheet...</div>
                 <div id="hutangList" class="space-y-2 max-h-[calc(100vh-140px)] overflow-y-auto pr-1 custom-scroll"></div>
             </div>
         </div>
     </div>
 
-    <!-- POPUP MODAL HAPUS MODERN (PORTO STYLE LIKE COPYTRADE) -->
+    <!-- POPUP MODAL HAPUS MODERN (ENTER-ENABLED) -->
     <div id="deleteModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="porto-card w-full max-w-sm p-6 rounded-2xl border border-rose-500/30 shadow-2xl space-y-4 rise-in text-center relative">
             <div class="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center text-xl font-bold mx-auto">
@@ -114,14 +115,14 @@
             </div>
             <div>
                 <h3 class="font-display font-bold text-white text-base mb-1">Hapus / Lunas Pinjaman</h3>
-                <p id="deleteModalText" class="text-xs text-slate-400">Yakin mau tandai pinjaman ini sudah lunas atau dihapus?</p>
+                <p id="deleteModalText" class="text-xs text-slate-400">Yakin mau hapus catatan pinjaman ini?</p>
             </div>
             <div class="flex gap-2 pt-2">
                 <button type="button" onclick="closeDeleteModal()" class="w-1/2 bg-[#1e2235] hover:bg-[#282d47] text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition">
-                    Batal
+                    Batal (Esc)
                 </button>
-                <button type="button" id="confirmDeleteBtn" class="w-1/2 bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-lg shadow-rose-600/20">
-                    Ya, Hapus
+                <button type="button" id="confirmDeleteBtn" class="w-1/2 bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-lg shadow-rose-600/20 focus:outline-none focus:ring-2 focus:ring-rose-400">
+                    Ya, Hapus (Enter)
                 </button>
             </div>
         </div>
@@ -129,6 +130,7 @@
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbzFDDLFAnahJ7lETXrLTQQApqvQDHCTePOWZUt5ppYYSYDcT9eNk2aZKzCxoINXun7x/exec";
+        const LOCAL_STORAGE_KEY = "hutang_cached_data";
 
         let globalData = [];
         let selectedFilterName = null;
@@ -144,7 +146,17 @@
 
         flatpickr("#tanggal", { dateFormat: "d/m/Y", defaultDate: "today" });
 
-        window.onload = loadData;
+        window.onload = function() {
+            // Instant Load dari Cache Lokal Dulu (Secepat CopyTrade)
+            const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (cached) {
+                try {
+                    globalData = JSON.parse(cached);
+                    renderData();
+                } catch(e) {}
+            }
+            loadData();
+        };
 
         function formatInputRibuan(input) {
             let isNegative = input.value.trim().startsWith('-');
@@ -176,12 +188,15 @@
         }
 
         function loadData() {
-            document.getElementById('loading').style.display = 'block';
+            if (globalData.length === 0) {
+                document.getElementById('loading').classList.remove('hidden');
+            }
             fetch(API_URL + "?action=read")
                 .then(res => res.json())
                 .then(data => {
-                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('loading').classList.add('hidden');
                     globalData = data;
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
                     renderData();
                 })
                 .catch(() => {
@@ -307,17 +322,36 @@
                 });
         }
 
-        // Modal Functions
+        // Modal Functions & Keyboard Event Listener (Enter/Esc)
         function openDeleteModal(no, peminjam, nominalStr) {
             deleteTargetNo = no;
             document.getElementById('deleteModalText').innerText = `Hapus catatan pinjaman ${peminjam} sebesar ${nominalStr}?`;
-            document.getElementById('deleteModal').classList.remove('hidden');
+            const modal = document.getElementById('deleteModal');
+            modal.classList.remove('hidden');
+            
+            // Otomatis fokus ke tombol "Ya, Hapus" biar bisa langsung Enter
+            setTimeout(() => {
+                document.getElementById('confirmDeleteBtn').focus();
+            }, 50);
         }
 
         function closeDeleteModal() {
             deleteTargetNo = null;
             document.getElementById('deleteModal').classList.add('hidden');
         }
+
+        // Listener Tombol Enter & Esc di Keyboard
+        window.addEventListener('keydown', function(e) {
+            const modal = document.getElementById('deleteModal');
+            if (!modal.classList.contains('hidden')) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('confirmDeleteBtn').click();
+                } else if (e.key === 'Escape') {
+                    closeDeleteModal();
+                }
+            }
+        });
 
         document.getElementById('confirmDeleteBtn').onclick = function() {
             if (deleteTargetNo !== null) {
@@ -327,7 +361,7 @@
                 fetch(`${API_URL}?action=delete&no=${deleteTargetNo}`)
                     .then(() => {
                         btn.disabled = false;
-                        btn.innerText = "Ya, Hapus";
+                        btn.innerText = "Ya, Hapus (Enter)";
                         closeDeleteModal();
                         loadData();
                     });
