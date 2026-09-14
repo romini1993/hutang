@@ -72,21 +72,24 @@
                 </div>
             </div>
 
-            <form id="hutangForm" onsubmit="handleSubmit(event)" class="porto-card p-5 rounded-2xl space-y-4">
+            <form id="hutangForm" onsubmit="handleSubmit(event)" class="porto-card p-5 rounded-2xl space-y-4" autocomplete="off">
                 <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400">Input Pinjaman / Cicilan</h2>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Tanggal</label>
-                    <input type="text" id="tanggal" required class="w-full porto-input rounded-xl px-3.5 py-2.5">
+                    <input type="text" id="tanggal" required class="w-full porto-input rounded-xl px-3.5 py-2.5" autocomplete="off">
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Siapa yang Pinjam</label>
-                    <input type="text" id="peminjam" required placeholder="Input Nama" oninput="handlePeminjamInput(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 uppercase font-medium">
+                    <input type="text" id="peminjam" required placeholder="Input Nama" 
+                           autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
+                           oninput="handlePeminjamInput(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 uppercase font-medium">
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Via / Pembayaran</label>
                     <div class="relative w-full">
                         <div id="ghostVia" class="absolute inset-0 px-3.5 py-2.5 pointer-events-none text-slate-500 font-medium whitespace-pre overflow-hidden"></div>
                         <input type="text" id="via" required placeholder="Contoh: Seabank, Dana, BCA, Cash" 
+                               autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false"
                                oninput="handleViaInput(this)" 
                                onkeydown="handleViaKeyDown(event, this)" 
                                onblur="acceptViaSuggestion(this)" 
@@ -95,7 +98,9 @@
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Nominal (Rp) <span class="text-[10px] text-slate-500">(pakai - untuk cicil/bayar)</span></label>
-                    <input type="text" id="nominal" inputmode="decimal" required placeholder="50.000 atau -20.000" oninput="formatInputRibuan(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 num">
+                    <input type="text" id="nominal" inputmode="decimal" required placeholder="50.000 atau -20.000" 
+                           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                           oninput="formatInputRibuan(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 num">
                 </div>
                 <button type="submit" id="submitBtn" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-rose-600/20">
                     Simpan Catatan
