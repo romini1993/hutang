@@ -35,7 +35,7 @@
         
         <!-- KOLOM KIRI: Header & Form -->
         <div class="lg:col-span-4 space-y-5 lg:sticky lg:top-6">
-            <!-- Header Dikecilin (Compact Style) -->
+            <!-- Header Dikecilin -->
             <div class="porto-card px-4 py-3 rounded-xl flex items-center gap-2.5 border-l-4 border-l-rose-500">
                 <div class="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 font-bold text-base">
                     💸
@@ -69,7 +69,17 @@
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Via / Pembayaran</label>
-                    <input type="text" id="via" required placeholder="Contoh: Cash, BCA, DANA, GoPay" class="w-full porto-input rounded-xl px-3.5 py-2.5">
+                    <input type="text" id="via" list="viaList" required placeholder="Contoh: Seabank, Dana, BCA, Cash" oninput="handleViaAutocomplete(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5">
+                    <datalist id="viaList">
+                        <option value="Seabank">
+                        <option value="Dana">
+                        <option value="BCA">
+                        <option value="Cash">
+                        <option value="GoPay">
+                        <option value="OVO">
+                        <option value="Mandiri">
+                        <option value="BRI">
+                    </datalist>
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Nominal (Rp) <span class="text-[10px] text-slate-500">(pakai - untuk cicil/bayar)</span></label>
@@ -147,7 +157,6 @@
         flatpickr("#tanggal", { dateFormat: "d/m/Y", defaultDate: "today" });
 
         window.onload = function() {
-            // Instant Load dari Cache Lokal Dulu (Secepat CopyTrade)
             const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
             if (cached) {
                 try {
@@ -157,6 +166,20 @@
             }
             loadData();
         };
+
+        // Autocomplete Otomatis untuk Via / Pembayaran
+        function handleViaAutocomplete(input) {
+            const val = input.value.trim().toLowerCase();
+            if (!val) return;
+            
+            const options = Array.from(document.querySelectorAll('#viaList option')).map(o => o.value);
+            const matches = options.filter(opt => opt.toLowerCase().startsWith(val));
+            
+            // Kalau cuma ada 1 pencocokan tunggal, langsung auto-complete kata utuhnya!
+            if (matches.length === 1) {
+                input.value = matches[0];
+            }
+        }
 
         function formatInputRibuan(input) {
             let isNegative = input.value.trim().startsWith('-');
@@ -322,14 +345,12 @@
                 });
         }
 
-        // Modal Functions & Keyboard Event Listener (Enter/Esc)
         function openDeleteModal(no, peminjam, nominalStr) {
             deleteTargetNo = no;
             document.getElementById('deleteModalText').innerText = `Hapus catatan pinjaman ${peminjam} sebesar ${nominalStr}?`;
             const modal = document.getElementById('deleteModal');
             modal.classList.remove('hidden');
             
-            // Otomatis fokus ke tombol "Ya, Hapus" biar bisa langsung Enter
             setTimeout(() => {
                 document.getElementById('confirmDeleteBtn').focus();
             }, 50);
@@ -340,7 +361,6 @@
             document.getElementById('deleteModal').classList.add('hidden');
         }
 
-        // Listener Tombol Enter & Esc di Keyboard
         window.addEventListener('keydown', function(e) {
             const modal = document.getElementById('deleteModal');
             if (!modal.classList.contains('hidden')) {
