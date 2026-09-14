@@ -46,7 +46,7 @@
             </div>
 
             <form id="hutangForm" onsubmit="handleSubmit(event)" class="porto-card p-5 rounded-2xl space-y-4">
-                <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400">Input Pinjaman Baru</h2>
+                <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400">Input Pinjaman / Cicilan</h2>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Tanggal</label>
                     <input type="text" id="tanggal" required class="w-full porto-input rounded-xl px-3.5 py-2.5">
@@ -60,8 +60,8 @@
                     <input type="text" id="via" required placeholder="Contoh: Cash, BCA, DANA, GoPay" class="w-full porto-input rounded-xl px-3.5 py-2.5">
                 </div>
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">Nominal (Rp)</label>
-                    <input type="text" id="nominal" required placeholder="10.000" oninput="formatInputRibuan(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 num">
+                    <label class="block text-xs text-slate-400 mb-1">Nominal (Rp) <span class="text-[10px] text-slate-500">(pakai - untuk cicil/bayar)</span></label>
+                    <input type="text" id="nominal" required placeholder="50.000 atau -20.000" oninput="formatInputRibuan(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 num">
                 </div>
                 <button type="submit" id="submitBtn" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-rose-600/20">
                     Simpan Catatan
@@ -105,13 +105,15 @@
 
         window.onload = loadData;
 
-        // Format angka pas ngetik di input nominal
+        // Izinkan tanda minus di depan angka
         function formatInputRibuan(input) {
+            let isNegative = input.value.trim().startsWith('-');
             let value = input.value.replace(/\D/g, '');
             if (value) {
-                input.value = new Intl.NumberFormat('id-ID').format(value);
+                let formatted = new Intl.NumberFormat('id-ID').format(value);
+                input.value = isNegative ? '-' + formatted : formatted;
             } else {
-                input.value = '';
+                input.value = isNegative ? '-' : '';
             }
         }
 
@@ -184,6 +186,7 @@
             } else {
                 keys.forEach(nama => {
                     const isSelected = selectedFilterName === nama;
+                    const totalNom = rekapPeminjam[nama];
                     const box = document.createElement('div');
                     box.className = `p-3 rounded-xl border cursor-pointer transition flex justify-between items-center ${
                         isSelected 
@@ -193,7 +196,7 @@
                     box.onclick = () => filterByPerson(isSelected ? null : nama);
                     box.innerHTML = `
                         <span class="font-semibold">${nama}</span>
-                        <b class="text-rose-400 font-bold num text-sm">${formatRupiah(rekapPeminjam[nama])}</b>
+                        <b class="${totalNom < 0 ? 'text-emerald-400' : 'text-rose-400'} font-bold num text-sm">${formatRupiah(totalNom)}</b>
                     `;
                     summaryEl.appendChild(box);
                 });
@@ -219,16 +222,17 @@
             reversedData.forEach((item, index) => {
                 const nom = parseFloat(item.nominal || 0);
                 const noDisplay = reversedData.length - index;
+                const isBayar = nom < 0;
 
                 const card = document.createElement('div');
                 card.className = "p-3 bg-[#090a10] border border-[#23273c] rounded-xl flex justify-between items-center";
                 card.innerHTML = `
                     <div>
-                        <div class="text-xs text-slate-400">#${noDisplay} • ${cleanTanggal(item.tanggal)} • <span class="text-rose-400 font-medium">${item.via || '-'}</span></div>
+                        <div class="text-xs text-slate-400">#${noDisplay} • ${cleanTanggal(item.tanggal)} • <span class="${isBayar ? 'text-emerald-400' : 'text-rose-400'} font-medium">${item.via || '-'}</span></div>
                         <div class="text-sm font-semibold text-white">${item.peminjam || '-'}</div>
                     </div>
                     <div class="text-right">
-                        <div class="num font-bold text-rose-400">${formatRupiah(nom)}</div>
+                        <div class="num font-bold ${isBayar ? 'text-emerald-400' : 'text-rose-400'}">${formatRupiah(nom)}</div>
                         <button onclick="handleHapus(${item.no})" class="text-[10px] bg-rose-600/20 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded mt-1 hover:bg-rose-600/40">Lunas / Hapus</button>
                     </div>
                 `;
@@ -246,8 +250,11 @@
             const peminjam = encodeURIComponent(document.getElementById('peminjam').value);
             const via = encodeURIComponent(document.getElementById('via').value);
             
-            // Bersihin titik sebelum dikirim ke Apps Script
-            const rawNominal = document.getElementById('nominal').value.replace(/\./g, '');
+            // Pertahankan tanda minus jika ada
+            let valStr = document.getElementById('nominal').value.trim();
+            let isNegative = valStr.startsWith('-');
+            let cleanVal = valStr.replace(/\D/g, '');
+            let rawNominal = isNegative ? '-' + cleanVal : cleanVal;
             const nom = encodeURIComponent(rawNominal);
 
             fetch(`${API_URL}?action=add&tanggal=${tgl}&peminjam=${peminjam}&via=${via}&nominal=${nom}`)
