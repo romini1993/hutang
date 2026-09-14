@@ -69,7 +69,7 @@
             </form>
         </div>
 
-        <!-- KOLOM TENGAH: Rekap -->
+        <!-- KOLOM TENGAH: Rekap Per Peminjam -->
         <div class="lg:col-span-4 space-y-4 lg:sticky lg:top-6">
             <div class="porto-card p-5 rounded-2xl space-y-3">
                 <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400 mb-2">Ringkasan</h2>
@@ -98,10 +98,9 @@
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
         }
 
-        // Fungsi rapihin tanggal ISO ke format dd/mm/yyyy
         function cleanTanggal(tglStr) {
             if (!tglStr) return '-';
-            if (tglStr.includes('T')) {
+            if (typeof tglStr === 'string' && tglStr.includes('T')) {
                 const d = new Date(tglStr);
                 if (!isNaN(d.getTime())) {
                     const day = String(d.getDate()).padStart(2, '0');
@@ -135,7 +134,7 @@
             let totalAkumulasi = 0;
             let rekapPeminjam = {};
 
-            data.forEach(item => {
+            data.forEach((item, index) => {
                 const nom = parseFloat(item.nominal || 0);
                 totalAkumulasi += nom;
 
@@ -145,11 +144,14 @@
                 }
                 rekapPeminjam[nama] += nom;
                 
+                // Urutan nomor tampilan web (1, 2, 3...)
+                const noDisplay = index + 1;
+
                 const card = document.createElement('div');
                 card.className = "p-3 bg-[#090a10] border border-[#23273c] rounded-xl flex justify-between items-center";
                 card.innerHTML = `
                     <div>
-                        <div class="text-xs text-slate-400">${cleanTanggal(item.tanggal)} • <span class="text-rose-400 font-medium">${item.via || '-'}</span></div>
+                        <div class="text-xs text-slate-400">#${noDisplay} • ${cleanTanggal(item.tanggal)} • <span class="text-rose-400 font-medium">${item.via || '-'}</span></div>
                         <div class="text-sm font-semibold text-white">${item.peminjam || '-'}</div>
                     </div>
                     <div class="text-right">
@@ -202,7 +204,7 @@
         }
 
         function handleHapus(no) {
-            if (confirm("Tandai pinjaman No #" + no + " ini sudah lunas/hapus?")) {
+            if (confirm("Tandai pinjaman ini sudah lunas/hapus?")) {
                 fetch(`${API_URL}?action=delete&no=${no}`)
                     .then(() => loadData());
             }
