@@ -72,7 +72,10 @@
         <!-- KOLOM TENGAH: Rekap Per Peminjam -->
         <div class="lg:col-span-4 space-y-4 lg:sticky lg:top-6">
             <div class="porto-card p-5 rounded-2xl space-y-3">
-                <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400 mb-2">Ringkasan</h2>
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400">Ringkasan</h2>
+                    <span class="text-[10px] text-slate-400">Klik nama untuk filter</span>
+                </div>
                 <div id="summaryBox" class="text-xs text-slate-300 space-y-2"></div>
             </div>
         </div>
@@ -80,7 +83,12 @@
         <!-- KOLOM KANAN: Daftar Riwayat -->
         <div class="lg:col-span-4 space-y-4 lg:sticky lg:top-6">
             <div class="porto-card p-5 rounded-2xl space-y-3">
-                <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400 mb-2">Daftar Pinjaman</h2>
+                <div class="flex justify-between items-center mb-2">
+                    <h2 id="listHeaderTitle" class="text-xs font-bold uppercase tracking-wider text-rose-400">Daftar Pinjaman</h2>
+                    <button id="resetFilterBtn" onclick="filterByPerson(null)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded hidden border border-slate-700">
+                        🔄 Semua Nama
+                    </button>
+                </div>
                 <div id="loading" class="text-center text-xs text-slate-500 py-6">Memuat data dari Sheet...</div>
                 <div id="hutangList" class="space-y-2 max-h-[calc(100vh-140px)] overflow-y-auto pr-1 custom-scroll"></div>
             </div>
@@ -89,6 +97,9 @@
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbzFDDLFAnahJ7lETXrLTQQApqvQDHCTePOWZUt5ppYYSYDcT9eNk2aZKzCxoINXun7x/exec";
+
+        let globalData = [];
+        let selectedFilterName = null;
 
         flatpickr("#tanggal", { dateFormat: "d/m/Y", defaultDate: "today" });
 
@@ -118,23 +129,33 @@
                 .then(res => res.json())
                 .then(data => {
                     document.getElementById('loading').style.display = 'none';
-                    renderData(data);
+                    globalData = data;
+                    renderData();
                 })
                 .catch(() => {
                     document.getElementById('loading').innerText = "Gagal memuat data.";
                 });
         }
 
-        function renderData(data) {
+        function filterByPerson(nama) {
+            selectedFilterName = nama;
+            renderData();
+        }
+
+        function renderData() {
             const listEl = document.getElementById('hutangList');
             const summaryEl = document.getElementById('summaryBox');
+            const headerTitle = document.getElementById('listHeaderTitle');
+            const resetBtn = document.getElementById('resetFilterBtn');
+
             listEl.innerHTML = '';
             summaryEl.innerHTML = '';
             
             let totalAkumulasi = 0;
             let rekapPeminjam = {};
 
-            data.forEach((item, index) => {
+            // 1. Olah Seluruh Data untuk Ringkasan & Total Status
+            globalData.forEach(item => {
                 const nom = parseFloat(item.nominal || 0);
                 totalAkumulasi += nom;
 
@@ -143,8 +164,52 @@
                     rekapPeminjam[nama] = 0;
                 }
                 rekapPeminjam[nama] += nom;
-                
-                // Urutan nomor tampilan web (1, 2, 3...)
+            });
+
+            // Update Total Stats di Header Kiri
+            document.getElementById('statTotalHutang').innerText = formatRupiah(totalAkumulasi);
+            document.getElementById('statCount').innerText = globalData.length;
+
+            // 2. Render Ringkasan (Tengah)
+            const keys = Object.keys(rekapPeminjam);
+            if (keys.length === 0) {
+                summaryEl.innerHTML = `<div class="p-3 bg-[#090a10] rounded-xl border border-[#23273c] text-slate-500 text-center">Belum ada catatan.</div>`;
+            } else {
+                keys.forEach(nama => {
+                    const isSelected = selectedFilterName === nama;
+                    const box = document.createElement('div');
+                    box.className = `p-3 rounded-xl border cursor-pointer transition flex justify-between items-center ${
+                        isSelected 
+                        ? 'bg-rose-500/10 border-rose-500 text-white font-bold ring-1 ring-rose-500' 
+                        : 'bg-[#090a10] border-[#23273c] hover:border-slate-600 text-slate-200'
+                    }`;
+                    box.onclick = () => filterByPerson(isSelected ? null : nama);
+                    box.innerHTML = `
+                        <span class="font-semibold">${nama}</span>
+                        <b class="text-rose-400 font-bold num text-sm">${formatRupiah(rekapPeminjam[nama])}</b>
+                    `;
+                    summaryEl.appendChild(box);
+                });
+            }
+
+            // 3. Filter & Render Daftar Pinjaman (Kanan)
+            let filteredData = globalData;
+            if (selectedFilterName) {
+                filteredData = globalData.filter(item => (item.peminjam || '').toUpperCase().trim() === selectedFilterName);
+                headerTitle.innerText = `Pinjaman: ${selectedFilterName}`;
+                resetBtn.classList.remove('hidden');
+            } else {
+                headerTitle.innerText = "Daftar Pinjaman";
+                resetBtn.classList.add('hidden');
+            }
+
+            if (filteredData.length === 0) {
+                listEl.innerHTML = `<div class="text-center text-xs text-slate-500 py-6">Tidak ada catatan pinjaman.</div>`;
+                return;
+            }
+
+            filteredData.forEach((item, index) => {
+                const nom = parseFloat(item.nominal || 0);
                 const noDisplay = index + 1;
 
                 const card = document.createElement('div');
@@ -161,24 +226,6 @@
                 `;
                 listEl.appendChild(card);
             });
-
-            document.getElementById('statTotalHutang').innerText = formatRupiah(totalAkumulasi);
-            document.getElementById('statCount').innerText = data.length;
-
-            const keys = Object.keys(rekapPeminjam);
-            if (keys.length === 0) {
-                summaryEl.innerHTML = `<div class="p-3 bg-[#090a10] rounded-xl border border-[#23273c] text-slate-500 text-center">Belum ada catatan.</div>`;
-            } else {
-                keys.forEach(nama => {
-                    const box = document.createElement('div');
-                    box.className = "p-3 bg-[#090a10] rounded-xl border border-[#23273c] flex justify-between items-center";
-                    box.innerHTML = `
-                        <span class="font-semibold text-white">${nama}</span>
-                        <b class="text-rose-400 font-bold num text-sm">${formatRupiah(rekapPeminjam[nama])}</b>
-                    `;
-                    summaryEl.appendChild(box);
-                });
-            }
         }
 
         function handleSubmit(e) {
