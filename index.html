@@ -192,7 +192,7 @@
                 });
             }
 
-            // 3. Filter & Render Daftar Pinjaman (Kanan)
+            // 3. Filter & Render Daftar Pinjaman (Kanan) - DI-REVERSE BIAR TERBARU DI ATAS
             let filteredData = globalData;
             if (selectedFilterName) {
                 filteredData = globalData.filter(item => (item.peminjam || '').toUpperCase().trim() === selectedFilterName);
@@ -208,9 +208,13 @@
                 return;
             }
 
-            filteredData.forEach((item, index) => {
+            // Slice lalu reverse biar urutan terbaru muncul paling atas
+            const reversedData = filteredData.slice().reverse();
+
+            reversedData.forEach((item, index) => {
                 const nom = parseFloat(item.nominal || 0);
-                const noDisplay = index + 1;
+                // Nomor urut tetap menampilkan index asli dari bawah atau urutan list teratas
+                const noDisplay = reversedData.length - index;
 
                 const card = document.createElement('div');
                 card.className = "p-3 bg-[#090a10] border border-[#23273c] rounded-xl flex justify-between items-center";
