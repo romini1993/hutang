@@ -61,7 +61,7 @@
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Nominal (Rp)</label>
-                    <input type="number" id="nominal" required placeholder="50000" class="w-full porto-input rounded-xl px-3.5 py-2.5 num">
+                    <input type="text" id="nominal" required placeholder="10.000" oninput="formatInputRibuan(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 num">
                 </div>
                 <button type="submit" id="submitBtn" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-rose-600/20">
                     Simpan Catatan
@@ -104,6 +104,16 @@
         flatpickr("#tanggal", { dateFormat: "d/m/Y", defaultDate: "today" });
 
         window.onload = loadData;
+
+        // Format angka pas ngetik di input nominal
+        function formatInputRibuan(input) {
+            let value = input.value.replace(/\D/g, '');
+            if (value) {
+                input.value = new Intl.NumberFormat('id-ID').format(value);
+            } else {
+                input.value = '';
+            }
+        }
 
         function formatRupiah(val) {
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
@@ -154,7 +164,6 @@
             let totalAkumulasi = 0;
             let rekapPeminjam = {};
 
-            // 1. Olah Seluruh Data untuk Ringkasan & Total Status
             globalData.forEach(item => {
                 const nom = parseFloat(item.nominal || 0);
                 totalAkumulasi += nom;
@@ -166,11 +175,9 @@
                 rekapPeminjam[nama] += nom;
             });
 
-            // Update Total Stats di Header Kiri
             document.getElementById('statTotalHutang').innerText = formatRupiah(totalAkumulasi);
             document.getElementById('statCount').innerText = globalData.length;
 
-            // 2. Render Ringkasan (Tengah)
             const keys = Object.keys(rekapPeminjam);
             if (keys.length === 0) {
                 summaryEl.innerHTML = `<div class="p-3 bg-[#090a10] rounded-xl border border-[#23273c] text-slate-500 text-center">Belum ada catatan.</div>`;
@@ -192,7 +199,6 @@
                 });
             }
 
-            // 3. Filter & Render Daftar Pinjaman (Kanan) - DI-REVERSE BIAR TERBARU DI ATAS
             let filteredData = globalData;
             if (selectedFilterName) {
                 filteredData = globalData.filter(item => (item.peminjam || '').toUpperCase().trim() === selectedFilterName);
@@ -208,12 +214,10 @@
                 return;
             }
 
-            // Slice lalu reverse biar urutan terbaru muncul paling atas
             const reversedData = filteredData.slice().reverse();
 
             reversedData.forEach((item, index) => {
                 const nom = parseFloat(item.nominal || 0);
-                // Nomor urut tetap menampilkan index asli dari bawah atau urutan list teratas
                 const noDisplay = reversedData.length - index;
 
                 const card = document.createElement('div');
@@ -241,7 +245,10 @@
             const tgl = encodeURIComponent(document.getElementById('tanggal').value);
             const peminjam = encodeURIComponent(document.getElementById('peminjam').value);
             const via = encodeURIComponent(document.getElementById('via').value);
-            const nom = encodeURIComponent(document.getElementById('nominal').value);
+            
+            // Bersihin titik sebelum dikirim ke Apps Script
+            const rawNominal = document.getElementById('nominal').value.replace(/\./g, '');
+            const nom = encodeURIComponent(rawNominal);
 
             fetch(`${API_URL}?action=add&tanggal=${tgl}&peminjam=${peminjam}&via=${via}&nominal=${nom}`)
                 .then(() => {
