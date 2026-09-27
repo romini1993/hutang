@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Catatan Hutang</title>
     
-    <!-- PWA Settings -->
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#090a10">
     <meta name="mobile-web-app-capable" content="yes">
@@ -28,26 +27,15 @@
         .custom-scroll::-webkit-scrollbar-thumb { background: #23273c; border-radius: 8px; }
         @keyframes riseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         .rise-in { animation: riseIn .3s ease-out both; }
-
-        /* Hide default details arrow */
         details > summary { list-style: none; }
         details > summary::-webkit-details-marker { display: none; }
-
-        /* Toast Animation */
         #toast {
-            position: fixed;
-            top: 20%;
-            left: 50%;
+            position: fixed; top: 20%; left: 50%;
             transform: translate(-50%, -50%) scale(0.85);
             transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.25s ease;
-            opacity: 0;
-            z-index: 9999;
-            pointer-events: none;
+            opacity: 0; z-index: 9999; pointer-events: none;
         }
-        #toast.show {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
-        }
+        #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     </style>
 </head>
 <body class="p-3 md:p-6 flex justify-center pb-20">
@@ -56,9 +44,7 @@
         <!-- KOLOM KIRI: Header & Form -->
         <div class="lg:col-span-4 space-y-5 lg:sticky lg:top-6">
             <div class="porto-card px-4 py-3 rounded-xl flex items-center gap-2.5 border-l-4 border-l-rose-500">
-                <div class="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 font-bold text-base">
-                    💸
-                </div>
+                <div class="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 font-bold text-base">💸</div>
                 <div>
                     <h1 class="font-display text-base font-bold text-white tracking-tight leading-none">CATATAN HUTANG</h1>
                     <p class="text-[10px] text-slate-400 mt-0.5">Catatan Pinjaman & Kas</p>
@@ -84,27 +70,18 @@
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Siapa yang Pinjam</label>
-                    <input type="text" id="peminjam" required placeholder="Input Nama" 
-                           autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
-                           oninput="handlePeminjamInput(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 font-medium">
+                    <input type="text" id="peminjam" required placeholder="Input Nama" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="handlePeminjamInput(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 font-medium">
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Via / Pembayaran</label>
                     <div class="relative w-full">
                         <div id="ghostVia" class="absolute inset-0 px-3.5 py-2.5 pointer-events-none text-slate-500 font-medium whitespace-pre overflow-hidden"></div>
-                        <input type="text" id="via" required placeholder="Contoh: Seabank, Dana, BCA, Cash" 
-                               autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
-                               oninput="handleViaInput(this)" 
-                               onkeydown="handleViaKeyDown(event, this)" 
-                               onblur="acceptViaSuggestion(this)" 
-                               class="w-full porto-input rounded-xl px-3.5 py-2.5 relative bg-transparent z-10">
+                        <input type="text" id="via" required placeholder="Contoh: Seabank, Dana, BCA, Cash" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="handleViaInput(this)" onkeydown="handleViaKeyDown(event, this)" onblur="acceptViaSuggestion(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 relative bg-transparent z-10">
                     </div>
                 </div>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Nominal (Rp) <span class="text-[10px] text-slate-500">(pakai - untuk cicil/bayar)</span></label>
-                    <input type="text" id="nominal" inputmode="decimal" required placeholder="50.000 atau -20.000" 
-                           autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
-                           oninput="formatInputRibuan(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 num">
+                    <input type="text" id="nominal" inputmode="decimal" required placeholder="50.000 atau -20.000" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="formatInputRibuan(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 num">
                 </div>
                 <button type="submit" id="submitBtn" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-rose-600/20">
                     Simpan Catatan
@@ -116,20 +93,15 @@
         <div class="lg:col-span-8 space-y-4 lg:sticky lg:top-6">
             <div class="porto-card p-5 rounded-2xl space-y-4 min-h-[500px]">
                 
-                <!-- Tab Pilihan -->
                 <div class="flex p-1 bg-[#090a10] rounded-xl border border-[#23273c] relative">
                     <button onclick="switchTab('aktif')" id="tabAktif" class="flex-1 py-2 text-sm font-bold text-rose-400 bg-[#1e2235] rounded-lg transition-all z-10 shadow">Hutang Aktif</button>
                     <button onclick="switchTab('riwayat')" id="tabRiwayat" class="flex-1 py-2 text-sm font-bold text-slate-500 rounded-lg transition-all z-10 hover:text-slate-300">Riwayat</button>
                 </div>
 
-                <!-- Bagian Header Daftar & Sorting -->
                 <div class="flex justify-between items-center px-1 mb-1">
                     <h2 id="listHeaderTitle" class="text-xs font-bold uppercase tracking-wider text-rose-400">Daftar Hutang Aktif</h2>
-                    
                     <div class="flex items-center gap-3">
                         <div id="loading" class="text-[10px] font-bold text-amber-400 hidden animate-pulse">Memuat...</div>
-                        
-                        <!-- Dropdown Sortir -->
                         <div id="sortContainer" class="flex items-center">
                             <select id="sortAktif" onchange="renderData()" class="bg-[#1e2235] text-[10px] text-slate-300 border border-[#23273c] rounded px-2 py-1 outline-none font-medium cursor-pointer">
                                 <option value="terbaru">⏳ Terbaru</option>
@@ -140,7 +112,6 @@
                     </div>
                 </div>
                 
-                <!-- Container List -->
                 <div id="groupedListContainer" class="space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto pr-1 custom-scroll">
                     <!-- List dirender lewat JavaScript -->
                 </div>
@@ -152,20 +123,14 @@
     <!-- POPUP MODAL HAPUS -->
     <div id="deleteModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="porto-card w-full max-w-sm p-6 rounded-2xl border border-rose-500/30 shadow-2xl space-y-4 rise-in text-center relative">
-            <div class="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center text-xl font-bold mx-auto">
-                ⚠️
-            </div>
+            <div class="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center text-xl font-bold mx-auto">⚠️</div>
             <div>
                 <h3 class="font-display font-bold text-white text-base mb-1">Hapus / Lunas Pinjaman</h3>
                 <p id="deleteModalText" class="text-xs text-slate-400">Yakin mau hapus catatan pinjaman ini?</p>
             </div>
             <div class="flex gap-2 pt-2">
-                <button type="button" onclick="closeDeleteModal()" class="w-1/2 bg-[#1e2235] hover:bg-[#282d47] text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition">
-                    Batal (Esc)
-                </button>
-                <button type="button" id="confirmDeleteBtn" class="w-1/2 bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-lg shadow-rose-600/20 focus:outline-none focus:ring-2 focus:ring-rose-400">
-                    Ya, Hapus (Enter)
-                </button>
+                <button type="button" onclick="closeDeleteModal()" class="w-1/2 bg-[#1e2235] hover:bg-[#282d47] text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition">Batal (Esc)</button>
+                <button type="button" id="confirmDeleteBtn" class="w-1/2 bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-lg shadow-rose-600/20 focus:outline-none focus:ring-2 focus:ring-rose-400">Ya, Hapus (Enter)</button>
             </div>
         </div>
     </div>
@@ -190,9 +155,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(() => console.log('Service Worker Registered'))
-                    .catch(err => console.log('SW Registration failed: ', err));
+                navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Registration failed: ', err));
             });
         }
 
@@ -215,7 +178,6 @@
             const text = document.getElementById('toastText');
 
             if (toastTimeout) clearTimeout(toastTimeout);
-
             text.innerText = message;
 
             if (type === 'success') {
@@ -225,7 +187,6 @@
                 icon.innerText = '✕';
                 toast.className = "px-5 py-3 rounded-2xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2 bg-rose-500/20 border-rose-500/40 text-rose-300 show";
             }
-
             toastTimeout = setTimeout(() => toast.classList.remove('show'), 1800);
         }
 
@@ -379,24 +340,16 @@
                     return;
                 }
 
-                // ===============================================
-                // LOGIKA SORTING BARU UNTUK TAB HUTANG AKTIF
-                // ===============================================
                 let sortMode = document.getElementById('sortAktif').value;
                 
                 groupKeys.sort((a, b) => {
                     if (sortMode === 'terbesar') {
-                        // Urut dari hutang paling besar ke kecil
                         return rekapPeminjam[b].total - rekapPeminjam[a].total;
                     } else if (sortMode === 'nama') {
-                        // Urut abjad A-Z
                         return a.localeCompare(b);
                     } else {
-                        // Default: Terbaru (Berdasarkan tanggal transaksi terakhir)
                         let lastDateA = Math.max(...rekapPeminjam[a].items.map(i => parseTanggalCustom(i.tanggal)));
                         let lastDateB = Math.max(...rekapPeminjam[b].items.map(i => parseTanggalCustom(i.tanggal)));
-                        
-                        // Kalau tanggalnya sama persis, urutin dari ID (no) yang paling baru dibuat
                         if (lastDateA === lastDateB) {
                             let noA = Math.max(...rekapPeminjam[a].items.map(i => i.no));
                             let noB = Math.max(...rekapPeminjam[b].items.map(i => i.no));
@@ -530,10 +483,9 @@
             const encVia = encodeURIComponent(via);
             const encNom = encodeURIComponent(rawNominal);
 
-            // Fetch ngga pake no-cors lagi biar langsung kelihatan kalo Apps Script lu belum di-deploy Anyone
-            fetch(`${API_URL}?action=add&tanggal=${encTgl}&peminjam=${encPeminjam}&via=${encVia}&nominal=${encNom}`)
-                .then(res => res.json())
-                .then(() => loadData())
+            // Fetch add dibikin no-cors lagi
+            fetch(`${API_URL}?action=add&tanggal=${encTgl}&peminjam=${encPeminjam}&via=${encVia}&nominal=${encNom}`, { mode: 'no-cors' })
+                .then(() => setTimeout(loadData, 500))
                 .catch(err => console.error("Error Add:", err)); 
         }
 
@@ -584,12 +536,13 @@
                 renderData();
                 showToast(`Data ${deleteTargetPerson} terhapus`, "success");
 
+                // Execute fetch with no-cors so browser doesn't block it
                 for (let no of nosToDelete) {
                     try {
-                        await fetch(`${API_URL}?action=delete&no=${no}`);
-                    } catch(err) { console.error("Error Hapus Semua:", err); }
+                        await fetch(`${API_URL}?action=delete&no=${no}`, { mode: 'no-cors' });
+                    } catch(err) {}
                 }
-                loadData();
+                setTimeout(loadData, 1000);
 
             } else if (deleteTargetNo !== null) {
                 const targetNo = deleteTargetNo;
@@ -599,10 +552,10 @@
                 showToast("Terhapus", "success");
 
                 try {
-                    await fetch(`${API_URL}?action=delete&no=${targetNo}`);
-                } catch(err) { console.error("Error Hapus Satuan:", err); }
+                    await fetch(`${API_URL}?action=delete&no=${targetNo}`, { mode: 'no-cors' });
+                } catch(err) {}
                 
-                loadData();
+                setTimeout(loadData, 500);
             }
         };
     </script>
