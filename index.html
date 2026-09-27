@@ -523,72 +523,38 @@
             }
         });
 
-        // LOGIKA HAPUS
+        // LOGIKA HAPUS YANG BARU
         document.getElementById('confirmDeleteBtn').onclick = async function() {
-            // Simpan target sebelum modal ditutup
-            const targetNo = deleteTargetNo;
-            const targetPerson = deleteTargetPerson;
-
-            // Tutup modal setelah target diamankan
             closeDeleteModal();
 
-            // =========================
-            // HAPUS SEMUA TRANSAKSI SATU ORANG
-            // =========================
-            if (targetPerson) {
-                // Optimistic update: langsung hilangkan dari tampilan
-                globalData = globalData.filter(
-                    item => (item.peminjam || '').toUpperCase().trim() !== targetPerson
-                );
+            if (deleteTargetPerson) {
+                const itemsToDelete = globalData.filter(item => (item.peminjam || '').toUpperCase().trim() === deleteTargetPerson);
+                const nosToDelete = itemsToDelete.map(i => i.no).sort((a, b) => b - a);
 
-                localStorage.setItem(
-                    LOCAL_STORAGE_KEY,
-                    JSON.stringify(globalData)
-                );
-
+                globalData = globalData.filter(item => (item.peminjam || '').toUpperCase().trim() !== deleteTargetPerson);
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(globalData));
                 renderData();
-                showToast(`Data ${targetPerson} terhapus`, "success");
+                showToast(`Data ${deleteTargetPerson} terhapus`, "success");
 
-                try {
-                    // Kirim SATU request ke Apps Script.
-                    // Apps Script akan menghapus semua baris orang tersebut
-                    // lalu merapikan nomor hanya sekali.
-                    await fetch(
-                        `${API_URL}?action=deletePerson&person=${encodeURIComponent(targetPerson)}`,
-                        { mode: 'no-cors' }
-                    );
-                } catch (err) {
-                    console.error("Error delete person:", err);
+                // Execute fetch with no-cors so browser doesn't block it
+                for (let no of nosToDelete) {
+                    try {
+                        await fetch(`${API_URL}?action=delete&no=${no}`, { mode: 'no-cors' });
+                    } catch(err) {}
                 }
-
                 setTimeout(loadData, 1000);
 
-            // =========================
-            // HAPUS SATU TRANSAKSI
-            // =========================
-            } else if (targetNo !== null) {
-                // Optimistic update: langsung hilangkan dari tampilan
-                globalData = globalData.filter(
-                    item => item.no !== targetNo
-                );
-
-                localStorage.setItem(
-                    LOCAL_STORAGE_KEY,
-                    JSON.stringify(globalData)
-                );
-
+            } else if (deleteTargetNo !== null) {
+                const targetNo = deleteTargetNo;
+                globalData = globalData.filter(item => item.no !== targetNo);
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(globalData));
                 renderData();
                 showToast("Terhapus", "success");
 
                 try {
-                    await fetch(
-                        `${API_URL}?action=delete&no=${encodeURIComponent(targetNo)}`,
-                        { mode: 'no-cors' }
-                    );
-                } catch (err) {
-                    console.error("Error delete:", err);
-                }
-
+                    await fetch(`${API_URL}?action=delete&no=${targetNo}`, { mode: 'no-cors' });
+                } catch(err) {}
+                
                 setTimeout(loadData, 500);
             }
         };
