@@ -18,27 +18,57 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <style>
         :root {
-            --bg: #08090e;
-            --card: #12131d;
-            --card-soft: #0d0e16;
-            --line: #1f2233;
-            --accent: #fb4d67;
-            --accent-soft: rgba(251, 77, 103, 0.12);
+            --bg: #08090b;
+            --card: #131420;
+            --card-soft: #0d0e17;
+            --line: #232640;
+            --accent: #6d6af0;
+            --accent-hover: #817ef7;
+            --accent-soft: rgba(109, 106, 240, 0.14);
+            --warn: #f59e0b;
+            --warn-soft: rgba(245, 158, 11, 0.12);
             --ok: #34d399;
             --muted: #8890a3;
         }
         html, body { width: 100%; min-height: 100vh; margin: 0; background: var(--bg); color: #eef0f5; font-family: 'Inter', sans-serif; }
         .font-display { font-family: 'Space Grotesk', sans-serif; }
         .num { font-family: 'Space Grotesk', sans-serif; font-variant-numeric: tabular-nums; }
-        .porto-card { background: var(--card); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
-        .porto-input { background: var(--card-soft); border: 1px solid var(--line); color: #f4f5f9; transition: border-color .15s ease; }
-        .porto-input:focus { border-color: var(--accent); outline: none; }
+        .porto-card { background: var(--card); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); transition: border-color .2s ease, box-shadow .2s ease; }
+        .porto-input { background: var(--card-soft); border: 1px solid var(--line); color: #f4f5f9; transition: border-color .15s ease, box-shadow .15s ease; }
+        .porto-input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
         @keyframes riseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-        .rise-in { animation: riseIn .3s ease-out both; }
+        .rise-in { animation: riseIn .35s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+        .text-accent { color: var(--accent); }
+        .btn-primary { background: var(--accent); box-shadow: 0 10px 25px rgba(109,106,240,0.28); transition: background .18s ease, transform .12s ease; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-warn-soft { background: var(--warn-soft); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); transition: background .18s ease, color .18s ease, transform .12s ease; }
+        .btn-warn-soft:hover { background: var(--warn); color: #14100a; }
+        .btn-warn-soft:active { transform: scale(0.97); }
+        .btn-warn-solid { background: var(--warn); transition: background .18s ease, transform .12s ease; }
+        .btn-warn-solid:hover { background: #fbbf24; }
+        .btn-warn-solid:active { transform: scale(0.98); }
+
+        /* --- Expand/collapse group (fade + slide) --- */
+        .group-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .32s cubic-bezier(0.16, 1, 0.3, 1); }
+        .group-body.open { grid-template-rows: 1fr; }
+        .group-body > div { overflow: hidden; }
+        .group-body .inner-fade { opacity: 0; transform: translateY(-4px); transition: opacity .25s ease .05s, transform .25s ease .05s; }
+        .group-body.open .inner-fade { opacity: 1; transform: translateY(0); }
+        .chev { transition: transform .3s cubic-bezier(0.16, 1, 0.3, 1); display: inline-block; }
+        .chev.open { transform: rotate(180deg); }
+        .group-header:hover { background: rgba(255,255,255,0.03); }
+        .group-card { transition: border-color .2s ease, box-shadow .2s ease; }
+        .group-card:hover { border-color: #2c2f4d; }
+        .history-row { transition: border-color .2s ease, transform .15s ease; }
+        .history-row:hover { transform: translateY(-1px); }
+
         details > summary { list-style: none; }
         details > summary::-webkit-details-marker { display: none; }
+
         #toast {
             position: fixed; top: 20%; left: 50%;
             transform: translate(-50%, -50%) scale(0.85);
@@ -48,6 +78,14 @@
         #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
         #errorBanner { display: none; }
         #errorBanner.show { display: flex; }
+
+        /* --- Modal: fade + scale instead of hard hidden/shown --- */
+        #deleteModal { opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+        #deleteModal.show { opacity: 1; pointer-events: auto; }
+        #deleteModal .modal-card { transform: scale(0.94) translateY(10px); opacity: 0; transition: transform .3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity .2s ease; }
+        #deleteModal.show .modal-card { transform: scale(1) translateY(0); opacity: 1; }
+
+        #groupedListContainer { transition: opacity .15s ease; }
     </style>
 </head>
 <body class="p-3 md:p-6 flex justify-center pb-20">
@@ -63,7 +101,7 @@
                 </div>
             </div>
 
-            <div id="errorBanner" class="items-start gap-2.5 px-4 py-3 rounded-xl text-xs" style="background: rgba(251,77,103,0.1); border: 1px solid rgba(251,77,103,0.35); color: #fda4b0;">
+            <div id="errorBanner" class="items-start gap-2.5 px-4 py-3 rounded-xl text-xs" style="background: var(--warn-soft); border: 1px solid rgba(245,158,11,0.35); color: #fcd34d;">
                 <span class="mt-px">⚠️</span>
                 <div class="flex-1">
                     <div id="errorBannerText" class="font-medium leading-snug">Gagal menyambung ke server.</div>
@@ -109,7 +147,7 @@
                     <label class="block text-xs text-slate-400 mb-1">Nominal (Rp) <span class="text-[10px] text-slate-500">(pakai - untuk cicil/bayar)</span></label>
                     <input type="text" id="nominal" inputmode="decimal" required placeholder="50.000 atau -20.000" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="formatInputRibuan(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 num">
                 </div>
-                <button type="submit" id="submitBtn" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-rose-600/20">
+                <button type="submit" id="submitBtn" class="w-full btn-primary text-white font-semibold py-3 rounded-xl">
                     Simpan Catatan
                 </button>
             </form>
@@ -147,16 +185,16 @@
     </div>
 
     <!-- POPUP MODAL HAPUS -->
-    <div id="deleteModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="porto-card w-full max-w-sm p-6 rounded-2xl border border-rose-500/30 shadow-2xl space-y-4 rise-in text-center relative">
-            <div class="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center text-xl font-bold mx-auto">⚠️</div>
+    <div id="deleteModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="modal-card porto-card w-full max-w-sm p-6 rounded-2xl border space-y-4 text-center relative" style="border-color: rgba(245,158,11,0.3);">
+            <div class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mx-auto" style="background: var(--warn-soft); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24;">⚠️</div>
             <div>
                 <h3 class="font-display font-bold text-white text-base mb-1">Hapus / Lunas Pinjaman</h3>
                 <p id="deleteModalText" class="text-xs text-slate-400">Yakin mau hapus catatan pinjaman ini?</p>
             </div>
             <div class="flex gap-2 pt-2">
                 <button type="button" onclick="closeDeleteModal()" class="w-1/2 bg-[#1e2235] hover:bg-[#282d47] text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition">Batal (Esc)</button>
-                <button type="button" id="confirmDeleteBtn" class="w-1/2 bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-lg shadow-rose-600/20 focus:outline-none focus:ring-2 focus:ring-rose-400">Ya, Hapus (Enter)</button>
+                <button type="button" id="confirmDeleteBtn" class="w-1/2 btn-warn-solid text-white font-semibold py-2.5 rounded-xl text-xs focus:outline-none focus:ring-2" style="--tw-ring-color: rgba(245,158,11,0.5);">Ya, Hapus (Enter)</button>
             </div>
         </div>
     </div>
@@ -209,9 +247,15 @@
             if (type === 'success') {
                 icon.innerText = '✓';
                 toast.className = "px-5 py-3 rounded-2xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2 bg-emerald-500/20 border-emerald-500/40 text-emerald-300 show";
+                toast.style.background = "";
+                toast.style.borderColor = "";
+                toast.style.color = "";
             } else {
                 icon.innerText = '✕';
-                toast.className = "px-5 py-3 rounded-2xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2 bg-rose-500/20 border-rose-500/40 text-rose-300 show";
+                toast.className = "px-5 py-3 rounded-2xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2 show";
+                toast.style.background = "rgba(245,158,11,0.15)";
+                toast.style.borderColor = "rgba(245,158,11,0.4)";
+                toast.style.color = "#fcd34d";
             }
             toastTimeout = setTimeout(() => toast.classList.remove('show'), 1800);
         }
@@ -340,30 +384,36 @@
         }
 
         function switchTab(tab) {
-            activeTab = tab;
-            const btnAktif = document.getElementById('tabAktif');
-            const btnRiwayat = document.getElementById('tabRiwayat');
-            const headerTitle = document.getElementById('listHeaderTitle');
-            const sortElement = document.getElementById('sortContainer');
+            const container = document.getElementById('groupedListContainer');
+            container.style.opacity = '0';
 
-            if(tab === 'aktif') {
-                btnAktif.className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all z-10";
-                btnAktif.style.cssText = "color: var(--accent); background: var(--card); box-shadow: 0 4px 12px rgba(0,0,0,0.25);";
-                btnRiwayat.className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all z-10 text-slate-500 hover:text-slate-300";
-                btnRiwayat.style.cssText = "";
-                headerTitle.innerText = "Daftar hutang aktif";
-                headerTitle.style.color = "var(--accent)";
-                sortElement.classList.remove('hidden');
-            } else {
-                btnRiwayat.className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all z-10";
-                btnRiwayat.style.cssText = "color: #fbbf24; background: var(--card); box-shadow: 0 4px 12px rgba(0,0,0,0.25);";
-                btnAktif.className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all z-10 text-slate-500 hover:text-slate-300";
-                btnAktif.style.cssText = "";
-                headerTitle.innerText = "Semua riwayat transaksi";
-                headerTitle.style.color = "#fbbf24";
-                sortElement.classList.add('hidden');
-            }
-            renderData();
+            setTimeout(() => {
+                activeTab = tab;
+                const btnAktif = document.getElementById('tabAktif');
+                const btnRiwayat = document.getElementById('tabRiwayat');
+                const headerTitle = document.getElementById('listHeaderTitle');
+                const sortElement = document.getElementById('sortContainer');
+
+                if(tab === 'aktif') {
+                    btnAktif.className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all z-10";
+                    btnAktif.style.cssText = "color: var(--accent); background: var(--card); box-shadow: 0 4px 12px rgba(0,0,0,0.25);";
+                    btnRiwayat.className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all z-10 text-slate-500 hover:text-slate-300";
+                    btnRiwayat.style.cssText = "";
+                    headerTitle.innerText = "Daftar hutang aktif";
+                    headerTitle.style.color = "var(--accent)";
+                    sortElement.classList.remove('hidden');
+                } else {
+                    btnRiwayat.className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all z-10";
+                    btnRiwayat.style.cssText = "color: #fbbf24; background: var(--card); box-shadow: 0 4px 12px rgba(0,0,0,0.25);";
+                    btnAktif.className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all z-10 text-slate-500 hover:text-slate-300";
+                    btnAktif.style.cssText = "";
+                    headerTitle.innerText = "Semua riwayat transaksi";
+                    headerTitle.style.color = "#fbbf24";
+                    sortElement.classList.add('hidden');
+                }
+                renderData();
+                requestAnimationFrame(() => { container.style.opacity = '1'; });
+            }, 140);
         }
 
         function renderData() {
@@ -564,19 +614,19 @@
             }
 
             const modal = document.getElementById('deleteModal');
-            modal.classList.remove('hidden');
-            setTimeout(() => document.getElementById('confirmDeleteBtn').focus(), 50);
+            modal.classList.add('show');
+            setTimeout(() => document.getElementById('confirmDeleteBtn').focus(), 80);
         }
 
         function closeDeleteModal() {
             deleteTargetNo = null;
             deleteTargetPerson = null;
-            document.getElementById('deleteModal').classList.add('hidden');
+            document.getElementById('deleteModal').classList.remove('show');
         }
 
         window.addEventListener('keydown', function(e) {
             const modal = document.getElementById('deleteModal');
-            if (!modal.classList.contains('hidden')) {
+            if (modal.classList.contains('show')) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     document.getElementById('confirmDeleteBtn').click();
