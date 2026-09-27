@@ -122,9 +122,22 @@
                     <button onclick="switchTab('riwayat')" id="tabRiwayat" class="flex-1 py-2 text-sm font-bold text-slate-500 rounded-lg transition-all z-10 hover:text-slate-300">Riwayat</button>
                 </div>
 
-                <div class="flex justify-between items-center px-1">
+                <!-- Bagian Header Daftar & Sorting -->
+                <div class="flex justify-between items-center px-1 mb-1">
                     <h2 id="listHeaderTitle" class="text-xs font-bold uppercase tracking-wider text-rose-400">Daftar Hutang Aktif</h2>
-                    <div id="loading" class="text-xs text-amber-400 hidden animate-pulse">Memuat data dari Sheet...</div>
+                    
+                    <div class="flex items-center gap-3">
+                        <div id="loading" class="text-[10px] font-bold text-amber-400 hidden animate-pulse">Memuat...</div>
+                        
+                        <!-- Dropdown Sortir -->
+                        <div id="sortContainer" class="flex items-center">
+                            <select id="sortAktif" onchange="renderData()" class="bg-[#1e2235] text-[10px] text-slate-300 border border-[#23273c] rounded px-2 py-1 outline-none font-medium cursor-pointer">
+                                <option value="terbaru">⏳ Terbaru</option>
+                                <option value="terbesar">💰 Terbesar</option>
+                                <option value="nama">🔤 Nama (A-Z)</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Container List -->
@@ -279,7 +292,7 @@
             if (!tglStr) return 0;
             let parts = tglStr.split('/');
             if (parts.length === 3) {
-                return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getTime();
+                return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
             }
             return new Date(tglStr).getTime() || 0;
         }
@@ -305,7 +318,10 @@
                     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
                     renderData();
                 })
-                .catch(() => { document.getElementById('loading').innerText = "Gagal memuat data."; });
+                .catch(err => { 
+                    console.error("Gagal load:", err);
+                    document.getElementById('loading').innerText = "Gagal!"; 
+                });
         }
 
         function switchTab(tab) {
@@ -313,15 +329,18 @@
             const btnAktif = document.getElementById('tabAktif');
             const btnRiwayat = document.getElementById('tabRiwayat');
             const headerTitle = document.getElementById('listHeaderTitle');
+            const sortElement = document.getElementById('sortContainer');
 
             if(tab === 'aktif') {
                 btnAktif.className = "flex-1 py-2 text-sm font-bold text-rose-400 bg-[#1e2235] rounded-lg transition-all z-10 shadow";
                 btnRiwayat.className = "flex-1 py-2 text-sm font-bold text-slate-500 rounded-lg transition-all z-10 hover:text-slate-300";
                 headerTitle.innerText = "Daftar Hutang Aktif";
+                sortElement.classList.remove('hidden');
             } else {
                 btnRiwayat.className = "flex-1 py-2 text-sm font-bold text-amber-400 bg-[#1e2235] rounded-lg transition-all z-10 shadow";
                 btnAktif.className = "flex-1 py-2 text-sm font-bold text-slate-500 rounded-lg transition-all z-10 hover:text-slate-300";
                 headerTitle.innerText = "Semua Riwayat Transaksi";
+                sortElement.classList.add('hidden');
             }
             renderData();
         }
@@ -347,7 +366,6 @@
                     rekapPeminjam[nama].items.push(item);
                 });
 
-                let htmlString = '';
                 let groupKeys = Object.keys(rekapPeminjam).filter(nama => {
                     const total = rekapPeminjam[nama].total;
                     if (total > 0) totalAkumulasiAktif += total;
@@ -361,6 +379,34 @@
                     return;
                 }
 
+                // ===============================================
+                // LOGIKA SORTING BARU UNTUK TAB HUTANG AKTIF
+                // ===============================================
+                let sortMode = document.getElementById('sortAktif').value;
+                
+                groupKeys.sort((a, b) => {
+                    if (sortMode === 'terbesar') {
+                        // Urut dari hutang paling besar ke kecil
+                        return rekapPeminjam[b].total - rekapPeminjam[a].total;
+                    } else if (sortMode === 'nama') {
+                        // Urut abjad A-Z
+                        return a.localeCompare(b);
+                    } else {
+                        // Default: Terbaru (Berdasarkan tanggal transaksi terakhir)
+                        let lastDateA = Math.max(...rekapPeminjam[a].items.map(i => parseTanggalCustom(i.tanggal)));
+                        let lastDateB = Math.max(...rekapPeminjam[b].items.map(i => parseTanggalCustom(i.tanggal)));
+                        
+                        // Kalau tanggalnya sama persis, urutin dari ID (no) yang paling baru dibuat
+                        if (lastDateA === lastDateB) {
+                            let noA = Math.max(...rekapPeminjam[a].items.map(i => i.no));
+                            let noB = Math.max(...rekapPeminjam[b].items.map(i => i.no));
+                            return noB - noA;
+                        }
+                        return lastDateB - lastDateA;
+                    }
+                });
+
+                let htmlString = '';
                 groupKeys.forEach(nama => {
                     const data = rekapPeminjam[nama];
                     const isLunas = data.total <= 0;
@@ -484,10 +530,11 @@
             const encVia = encodeURIComponent(via);
             const encNom = encodeURIComponent(rawNominal);
 
-            // Tambahin no-cors biar ga error diblok browser
-            fetch(`${API_URL}?action=add&tanggal=${encTgl}&peminjam=${encPeminjam}&via=${encVia}&nominal=${encNom}`, { mode: 'no-cors' })
+            // Fetch ngga pake no-cors lagi biar langsung kelihatan kalo Apps Script lu belum di-deploy Anyone
+            fetch(`${API_URL}?action=add&tanggal=${encTgl}&peminjam=${encPeminjam}&via=${encVia}&nominal=${encNom}`)
+                .then(res => res.json())
                 .then(() => loadData())
-                .catch(() => loadData()); 
+                .catch(err => console.error("Error Add:", err)); 
         }
 
         function openDeleteModal(e, no, peminjam, nominalStr, isDeleteAll = false) {
@@ -524,42 +571,36 @@
             }
         });
 
-        // LOGIKA HAPUS YANG BARU (Pake antrian biar Google Sheet ngga nge-hang/salah hapus)
+        // LOGIKA HAPUS YANG BARU
         document.getElementById('confirmDeleteBtn').onclick = async function() {
             closeDeleteModal();
 
             if (deleteTargetPerson) {
-                // Kalo hapus semua: kita urutin nomor baris (no) dari yg TERBESAR (Paling bawah di sheet) ke TERKECIL
-                // Tujuannya biar pas dihapus satu-satu, posisi baris yg belum dihapus ngga kegeser-geser.
                 const itemsToDelete = globalData.filter(item => (item.peminjam || '').toUpperCase().trim() === deleteTargetPerson);
                 const nosToDelete = itemsToDelete.map(i => i.no).sort((a, b) => b - a);
 
-                // Hapus di lokal biar instan di UI
                 globalData = globalData.filter(item => (item.peminjam || '').toUpperCase().trim() !== deleteTargetPerson);
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(globalData));
                 renderData();
                 showToast(`Data ${deleteTargetPerson} terhapus`, "success");
 
-                // Request ke sheet ngantri 1 per 1 nunggu yg sebelumnya selesai (await)
                 for (let no of nosToDelete) {
                     try {
-                        await fetch(`${API_URL}?action=delete&no=${no}`, { mode: 'no-cors' });
-                    } catch(err) { console.error(err); }
+                        await fetch(`${API_URL}?action=delete&no=${no}`);
+                    } catch(err) { console.error("Error Hapus Semua:", err); }
                 }
                 loadData();
 
             } else if (deleteTargetNo !== null) {
-                // Kalo hapus satuan
                 const targetNo = deleteTargetNo;
-                
                 globalData = globalData.filter(item => item.no !== targetNo);
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(globalData));
                 renderData();
                 showToast("Terhapus", "success");
 
                 try {
-                    await fetch(`${API_URL}?action=delete&no=${targetNo}`, { mode: 'no-cors' });
-                } catch(err) { console.error(err); }
+                    await fetch(`${API_URL}?action=delete&no=${targetNo}`);
+                } catch(err) { console.error("Error Hapus Satuan:", err); }
                 
                 loadData();
             }
