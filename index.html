@@ -216,6 +216,7 @@
         let deleteTargetPerson = null; 
         let currentSuggestion = "";
         let toastTimeout = null;
+        let expandedGroups = new Set();
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -473,44 +474,50 @@
                 groupKeys.forEach(nama => {
                     const data = rekapPeminjam[nama];
                     const isLunas = data.total <= 0;
-                    
+                    const key = safeId(nama);
+                    const isOpen = expandedGroups.has(nama);
+
                     data.items.sort((a,b) => b.no - a.no);
 
                     htmlString += `
-                    <details class="bg-[#12131d] border border-[#1f2233] rounded-2xl mb-3 overflow-hidden group">
-                        <summary class="flex justify-between items-center p-4 cursor-pointer outline-none hover:bg-[#161925] transition-colors">
-                            <div class="flex flex-col">
-                                <span class="font-bold text-slate-200 text-sm">${nama}</span>
+                    <div class="group-card rise-in bg-[#131420] border border-[#232640] rounded-2xl mb-3 overflow-hidden">
+                        <button type="button" onclick="toggleGroup('${nama.replace(/'/g, "\\'")}')" class="group-header w-full flex justify-between items-center p-4 cursor-pointer outline-none text-left">
+                            <div class="flex flex-col min-w-0">
+                                <span class="font-bold text-slate-200 text-sm truncate">${nama}</span>
                                 <span class="text-[10px] text-slate-500">${data.items.length} transaksi</span>
                             </div>
-                            <div class="flex items-center gap-4">
-                                <span class="font-display font-bold num text-sm ${isLunas ? 'text-emerald-400' : 'text-rose-400'}">
+                            <div class="flex items-center gap-3 shrink-0">
+                                <span class="font-display font-bold num text-sm ${isLunas ? 'text-emerald-400' : 'text-accent'}">
                                     ${formatRupiah(data.total)}
                                 </span>
-                                <button onclick="openDeleteModal(event, null, '${nama}', null, true)" class="bg-rose-500/10 text-rose-500 border border-rose-500/20 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-rose-600 hover:text-white transition-colors">
+                                <span onclick="event.stopPropagation(); openDeleteModal(event, null, '${nama.replace(/'/g, "\\'")}', null, true)" class="btn-warn-soft px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer">
                                     Lunas / Hapus
-                                </button>
-                                <span class="text-slate-500 text-xs group-open:rotate-180 transition-transform">▼</span>
+                                </span>
+                                <span id="chev-${key}" class="chev ${isOpen ? 'open' : ''} text-slate-500 text-xs">▼</span>
                             </div>
-                        </summary>
-                        
-                        <div class="px-4 pb-4 pt-2 border-t border-[#1e2235]/50 bg-[#090a10]">
-                            ${data.items.map(item => `
-                                <div class="flex justify-between items-center py-2.5 border-b border-[#1e2235]/30 last:border-0">
-                                    <div class="flex flex-col">
-                                        <span class="text-[11px] text-slate-400">#${item.no} •${cleanTanggal(item.tanggal)}</span>
-                                        <span class="text-xs text-slate-200 font-medium">${item.via || '-'}</span>
-                                    </div>
-                                    <div class="flex items-center gap-4">
-                                        <span class="text-xs font-bold num ${item.nominal < 0 ? 'text-emerald-400' : 'text-rose-400'}">
-                                            ${formatRupiah(item.nominal)}
-                                        </span>
-                                        <button onclick="openDeleteModal(event, ${item.no}, '${item.peminjam}', '${formatRupiah(item.nominal)}', false)" class="text-[10px] bg-[#1e2235] text-slate-400 hover:text-rose-400 px-2 py-1 rounded transition">❌</button>
-                                    </div>
+                        </button>
+
+                        <div id="body-${key}" class="group-body ${isOpen ? 'open' : ''}">
+                            <div>
+                                <div class="inner-fade px-4 pb-4 pt-2 border-t border-[#232640]/60 bg-[#0d0e17]">
+                                    ${data.items.map(item => `
+                                        <div class="flex justify-between items-center py-2.5 border-b border-[#232640]/40 last:border-0">
+                                            <div class="flex flex-col">
+                                                <span class="text-[11px] text-slate-400">#${item.no} •${cleanTanggal(item.tanggal)}</span>
+                                                <span class="text-xs text-slate-200 font-medium">${item.via || '-'}</span>
+                                            </div>
+                                            <div class="flex items-center gap-4">
+                                                <span class="text-xs font-bold num ${item.nominal < 0 ? 'text-emerald-400' : 'text-accent'}">
+                                                    ${formatRupiah(item.nominal)}
+                                                </span>
+                                                <button onclick="openDeleteModal(event, ${item.no}, '${item.peminjam}', '${formatRupiah(item.nominal)}', false)" class="text-[10px] bg-[#1e2235] text-slate-400 hover:text-amber-400 px-2 py-1 rounded transition">❌</button>
+                                            </div>
+                                        </div>
+                                    `).join('')}
                                 </div>
-                            `).join('')}
+                            </div>
                         </div>
-                    </details>`;
+                    </div>`;
                 });
                 container.innerHTML = htmlString;
 
@@ -536,23 +543,44 @@
                     const isBayar = nom < 0;
                     
                     htmlString += `
-                    <div class="p-3.5 bg-[#12131d] border border-[#1f2233] rounded-2xl flex justify-between items-center group hover:border-slate-700 transition">
+                    <div class="history-row rise-in p-3.5 bg-[#131420] border border-[#232640] rounded-2xl flex justify-between items-center">
                         <div>
                             <div class="flex flex-col">
                                 <span class="text-sm font-bold text-slate-200">${item.peminjam || '-'}</span>
-                                <span class="text-[11px] text-slate-400">#${item.no} • ${item.tanggal} • <span class="${isBayar ? 'text-emerald-400' : 'text-rose-400'} font-medium">${item.via || '-'}</span></span>
+                                <span class="text-[11px] text-slate-400">#${item.no} • ${item.tanggal} • <span class="${isBayar ? 'text-emerald-400' : 'text-accent'} font-medium">${item.via || '-'}</span></span>
                             </div>
                         </div>
                         <div class="flex items-center gap-4">
-                            <div class="num font-bold text-sm ${isBayar ? 'text-emerald-400' : 'text-rose-400'} text-right w-24">
+                            <div class="num font-bold text-sm ${isBayar ? 'text-emerald-400' : 'text-accent'} text-right w-24">
                                 ${formatRupiah(nom)}
                             </div>
-                            <button onclick="openDeleteModal(event, ${item.no}, '${item.peminjam}', '${formatRupiah(nom)}', false)" class="text-[10px] bg-[#1e2235] text-slate-400 hover:text-rose-400 px-2 py-1.5 rounded transition">❌</button>
+                            <button onclick="openDeleteModal(event, ${item.no}, '${item.peminjam}', '${formatRupiah(nom)}', false)" class="text-[10px] bg-[#1e2235] text-slate-400 hover:text-amber-400 px-2 py-1.5 rounded transition">❌</button>
                         </div>
                     </div>`;
                 });
                 htmlString += '</div>';
                 container.innerHTML = htmlString;
+            }
+        }
+
+        function safeId(nama) {
+            return nama.replace(/[^a-zA-Z0-9]/g, '_') || 'x';
+        }
+
+        function toggleGroup(nama) {
+            const key = safeId(nama);
+            const body = document.getElementById('body-' + key);
+            const chev = document.getElementById('chev-' + key);
+            if (!body) return;
+
+            if (expandedGroups.has(nama)) {
+                expandedGroups.delete(nama);
+                body.classList.remove('open');
+                if (chev) chev.classList.remove('open');
+            } else {
+                expandedGroups.add(nama);
+                body.classList.add('open');
+                if (chev) chev.classList.add('open');
             }
         }
 
