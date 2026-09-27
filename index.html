@@ -275,15 +275,12 @@
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
         }
 
-        // Helper fungsi buat parse tanggal dd/mm/yyyy ke timestamp biar bisa di-sort akurat
         function parseTanggalCustom(tglStr) {
             if (!tglStr) return 0;
-            // Kalo format dari input flatpickr (dd/mm/yyyy)
             let parts = tglStr.split('/');
             if (parts.length === 3) {
                 return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getTime();
             }
-            // Fallback kalo formatnya aneh/berbeda
             return new Date(tglStr).getTime() || 0;
         }
 
@@ -339,7 +336,6 @@
             if (activeTab === 'aktif') {
                 let rekapPeminjam = {};
 
-                // Grouping by Nama untuk tab Aktif
                 globalData.forEach(item => {
                     const nama = (item.peminjam || 'TANPA NAMA').toUpperCase().trim();
                     const nom = parseFloat(item.nominal || 0);
@@ -410,17 +406,12 @@
                 container.innerHTML = htmlString;
 
             } else {
-                // Tab RIWAYAT: List Semua Data Diurutin by Tanggal
-                
-                // Hitung total hutang aktif juga walau di tab riwayat biar statnya ga 0
                 globalData.forEach(item => { totalAkumulasiAktif += parseFloat(item.nominal || 0); });
                 document.getElementById('statTotalHutang').innerText = formatRupiah(totalAkumulasiAktif);
 
-                // Clone array biar data asli ga berubah, lalu sort berdasarkan kalender tanggal
                 let historyData = [...globalData].sort((a, b) => {
                     let timeA = parseTanggalCustom(a.tanggal);
                     let timeB = parseTanggalCustom(b.tanggal);
-                    // Kalau tanggalnya sama persis, urutin dari yang terbaru input
                     if (timeB === timeA) return b.no - a.no;
                     return timeB - timeA;
                 });
@@ -479,7 +470,6 @@
             globalData.push(newItem);
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(globalData));
             
-            // Pindah ke tab aktif kalau lagi di tab lunas/riwayat dan hutangnya > 0
             if(activeTab === 'riwayat' && nomNum > 0) switchTab('aktif'); 
             else renderData();
 
@@ -494,17 +484,14 @@
             const encVia = encodeURIComponent(via);
             const encNom = encodeURIComponent(rawNominal);
 
-            fetch(`${API_URL}?action=add&tanggal=${encTgl}&peminjam=${encPeminjam}&via=${encVia}&nominal=${encNom}`)
-                .then(() => loadData());
+            // Tambahin no-cors biar ga error diblok browser
+            fetch(`${API_URL}?action=add&tanggal=${encTgl}&peminjam=${encPeminjam}&via=${encVia}&nominal=${encNom}`, { mode: 'no-cors' })
+                .then(() => loadData())
+                .catch(() => loadData()); 
         }
 
-        // Modal Handler (Bisa hapus satu item, atau hapus semua sekalian)
         function openDeleteModal(e, no, peminjam, nominalStr, isDeleteAll = false) {
-            if(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-
+            if(e) { e.preventDefault(); e.stopPropagation(); }
             deleteTargetNo = no;
             deleteTargetPerson = isDeleteAll ? peminjam : null;
 
@@ -516,7 +503,6 @@
 
             const modal = document.getElementById('deleteModal');
             modal.classList.remove('hidden');
-            
             setTimeout(() => document.getElementById('confirmDeleteBtn').focus(), 50);
         }
 
@@ -538,35 +524,44 @@
             }
         });
 
-        document.getElementById('confirmDeleteBtn').onclick = function() {
+        // LOGIKA HAPUS YANG BARU (Pake antrian biar Google Sheet ngga nge-hang/salah hapus)
+        document.getElementById('confirmDeleteBtn').onclick = async function() {
             closeDeleteModal();
 
             if (deleteTargetPerson) {
-                // HAPUS SEMUA DATA PER ORANG
+                // Kalo hapus semua: kita urutin nomor baris (no) dari yg TERBESAR (Paling bawah di sheet) ke TERKECIL
+                // Tujuannya biar pas dihapus satu-satu, posisi baris yg belum dihapus ngga kegeser-geser.
                 const itemsToDelete = globalData.filter(item => (item.peminjam || '').toUpperCase().trim() === deleteTargetPerson);
-                const nosToDelete = itemsToDelete.map(i => i.no);
+                const nosToDelete = itemsToDelete.map(i => i.no).sort((a, b) => b - a);
 
-                // Hapus di lokal biar instan
+                // Hapus di lokal biar instan di UI
                 globalData = globalData.filter(item => (item.peminjam || '').toUpperCase().trim() !== deleteTargetPerson);
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(globalData));
                 renderData();
                 showToast(`Data ${deleteTargetPerson} terhapus`, "success");
 
-                // Hapus di Google Sheet (panggil request hapusnya barengan)
-                Promise.all(nosToDelete.map(no =>
-                    fetch(`${API_URL}?action=delete&no=${no}`)
-                )).then(() => loadData());
+                // Request ke sheet ngantri 1 per 1 nunggu yg sebelumnya selesai (await)
+                for (let no of nosToDelete) {
+                    try {
+                        await fetch(`${API_URL}?action=delete&no=${no}`, { mode: 'no-cors' });
+                    } catch(err) { console.error(err); }
+                }
+                loadData();
 
             } else if (deleteTargetNo !== null) {
-                // HAPUS SATU ITEM AJA
+                // Kalo hapus satuan
                 const targetNo = deleteTargetNo;
+                
                 globalData = globalData.filter(item => item.no !== targetNo);
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(globalData));
                 renderData();
                 showToast("Terhapus", "success");
 
-                fetch(`${API_URL}?action=delete&no=${targetNo}`)
-                    .then(() => loadData());
+                try {
+                    await fetch(`${API_URL}?action=delete&no=${targetNo}`, { mode: 'no-cors' });
+                } catch(err) { console.error(err); }
+                
+                loadData();
             }
         };
     </script>
