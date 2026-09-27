@@ -118,8 +118,8 @@
                 
                 <!-- Tab Pilihan -->
                 <div class="flex p-1 bg-[#090a10] rounded-xl border border-[#23273c] relative">
-                    <button onclick="switchTab('aktif')" id="tabAktif" class="flex-1 py-2 text-sm font-bold text-rose-400 bg-[#1e2235] rounded-lg transition-all z-10 shadow">Belum Lunas</button>
-                    <button onclick="switchTab('lunas')" id="tabLunas" class="flex-1 py-2 text-sm font-bold text-slate-500 rounded-lg transition-all z-10 hover:text-slate-300">Udah Lunas</button>
+                    <button onclick="switchTab('aktif')" id="tabAktif" class="flex-1 py-2 text-sm font-bold text-rose-400 bg-[#1e2235] rounded-lg transition-all z-10 shadow">Hutang Aktif</button>
+                    <button onclick="switchTab('riwayat')" id="tabRiwayat" class="flex-1 py-2 text-sm font-bold text-slate-500 rounded-lg transition-all z-10 hover:text-slate-300">Riwayat</button>
                 </div>
 
                 <div class="flex justify-between items-center px-1">
@@ -127,7 +127,7 @@
                     <div id="loading" class="text-xs text-amber-400 hidden animate-pulse">Memuat data dari Sheet...</div>
                 </div>
                 
-                <!-- Container List Expand/Collapse -->
+                <!-- Container List -->
                 <div id="groupedListContainer" class="space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto pr-1 custom-scroll">
                     <!-- List dirender lewat JavaScript -->
                 </div>
@@ -275,6 +275,18 @@
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
         }
 
+        // Helper fungsi buat parse tanggal dd/mm/yyyy ke timestamp biar bisa di-sort akurat
+        function parseTanggalCustom(tglStr) {
+            if (!tglStr) return 0;
+            // Kalo format dari input flatpickr (dd/mm/yyyy)
+            let parts = tglStr.split('/');
+            if (parts.length === 3) {
+                return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getTime();
+            }
+            // Fallback kalo formatnya aneh/berbeda
+            return new Date(tglStr).getTime() || 0;
+        }
+
         function cleanTanggal(tglStr) {
             if (!tglStr) return '-';
             if (typeof tglStr === 'string' && tglStr.includes('T')) {
@@ -302,17 +314,17 @@
         function switchTab(tab) {
             activeTab = tab;
             const btnAktif = document.getElementById('tabAktif');
-            const btnLunas = document.getElementById('tabLunas');
+            const btnRiwayat = document.getElementById('tabRiwayat');
             const headerTitle = document.getElementById('listHeaderTitle');
 
             if(tab === 'aktif') {
                 btnAktif.className = "flex-1 py-2 text-sm font-bold text-rose-400 bg-[#1e2235] rounded-lg transition-all z-10 shadow";
-                btnLunas.className = "flex-1 py-2 text-sm font-bold text-slate-500 rounded-lg transition-all z-10 hover:text-slate-300";
+                btnRiwayat.className = "flex-1 py-2 text-sm font-bold text-slate-500 rounded-lg transition-all z-10 hover:text-slate-300";
                 headerTitle.innerText = "Daftar Hutang Aktif";
             } else {
-                btnLunas.className = "flex-1 py-2 text-sm font-bold text-emerald-400 bg-[#1e2235] rounded-lg transition-all z-10 shadow";
+                btnRiwayat.className = "flex-1 py-2 text-sm font-bold text-amber-400 bg-[#1e2235] rounded-lg transition-all z-10 shadow";
                 btnAktif.className = "flex-1 py-2 text-sm font-bold text-slate-500 rounded-lg transition-all z-10 hover:text-slate-300";
-                headerTitle.innerText = "Riwayat Lunas";
+                headerTitle.innerText = "Semua Riwayat Transaksi";
             }
             renderData();
         }
@@ -322,85 +334,126 @@
             container.innerHTML = '';
             
             let totalAkumulasiAktif = 0;
-            let rekapPeminjam = {};
-
-            // Grouping by Nama
-            globalData.forEach(item => {
-                const nama = (item.peminjam || 'TANPA NAMA').toUpperCase().trim();
-                const nom = parseFloat(item.nominal || 0);
-
-                if (!rekapPeminjam[nama]) {
-                    rekapPeminjam[nama] = { total: 0, items: [] };
-                }
-                rekapPeminjam[nama].total += nom;
-                rekapPeminjam[nama].items.push(item);
-            });
-
             document.getElementById('statCount').innerText = globalData.length;
 
-            let htmlString = '';
-            let groupKeys = Object.keys(rekapPeminjam).filter(nama => {
-                const total = rekapPeminjam[nama].total;
-                if(activeTab === 'aktif') {
+            if (activeTab === 'aktif') {
+                let rekapPeminjam = {};
+
+                // Grouping by Nama untuk tab Aktif
+                globalData.forEach(item => {
+                    const nama = (item.peminjam || 'TANPA NAMA').toUpperCase().trim();
+                    const nom = parseFloat(item.nominal || 0);
+
+                    if (!rekapPeminjam[nama]) {
+                        rekapPeminjam[nama] = { total: 0, items: [] };
+                    }
+                    rekapPeminjam[nama].total += nom;
+                    rekapPeminjam[nama].items.push(item);
+                });
+
+                let htmlString = '';
+                let groupKeys = Object.keys(rekapPeminjam).filter(nama => {
+                    const total = rekapPeminjam[nama].total;
                     if (total > 0) totalAkumulasiAktif += total;
                     return total > 0;
-                } else {
-                    return total <= 0;
+                });
+
+                document.getElementById('statTotalHutang').innerText = formatRupiah(totalAkumulasiAktif);
+
+                if (groupKeys.length === 0) {
+                    container.innerHTML = `<div class="text-center text-xs text-slate-500 py-10">Belum ada catatan hutang aktif.</div>`;
+                    return;
                 }
-            });
 
-            document.getElementById('statTotalHutang').innerText = formatRupiah(totalAkumulasiAktif);
+                groupKeys.forEach(nama => {
+                    const data = rekapPeminjam[nama];
+                    const isLunas = data.total <= 0;
+                    
+                    data.items.sort((a,b) => b.no - a.no);
 
-            if (groupKeys.length === 0) {
-                container.innerHTML = `<div class="text-center text-xs text-slate-500 py-10">Belum ada data di tab ini.</div>`;
-                return;
-            }
+                    htmlString += `
+                    <details class="bg-[#10121d] border border-[#1e2235] rounded-xl mb-3 overflow-hidden group">
+                        <summary class="flex justify-between items-center p-4 cursor-pointer outline-none hover:bg-[#161925] transition-colors">
+                            <div class="flex flex-col">
+                                <span class="font-bold text-slate-200 text-sm">${nama}</span>
+                                <span class="text-[10px] text-slate-500">${data.items.length} transaksi</span>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="font-display font-bold num text-sm ${isLunas ? 'text-emerald-400' : 'text-rose-400'}">
+                                    ${formatRupiah(data.total)}
+                                </span>
+                                <button onclick="openDeleteModal(event, null, '${nama}', null, true)" class="bg-rose-500/10 text-rose-500 border border-rose-500/20 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-rose-600 hover:text-white transition-colors">
+                                    Lunas / Hapus
+                                </button>
+                                <span class="text-slate-500 text-xs group-open:rotate-180 transition-transform">▼</span>
+                            </div>
+                        </summary>
+                        
+                        <div class="px-4 pb-4 pt-2 border-t border-[#1e2235]/50 bg-[#090a10]">
+                            ${data.items.map(item => `
+                                <div class="flex justify-between items-center py-2.5 border-b border-[#1e2235]/30 last:border-0">
+                                    <div class="flex flex-col">
+                                        <span class="text-[11px] text-slate-400">#${item.no} •${cleanTanggal(item.tanggal)}</span>
+                                        <span class="text-xs text-slate-200 font-medium">${item.via || '-'}</span>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <span class="text-xs font-bold num ${item.nominal < 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                                            ${formatRupiah(item.nominal)}
+                                        </span>
+                                        <button onclick="openDeleteModal(event, ${item.no}, '${item.peminjam}', '${formatRupiah(item.nominal)}', false)" class="text-[10px] bg-[#1e2235] text-slate-400 hover:text-rose-400 px-2 py-1 rounded transition">❌</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </details>`;
+                });
+                container.innerHTML = htmlString;
 
-            groupKeys.forEach(nama => {
-                const data = rekapPeminjam[nama];
-                const isLunas = data.total <= 0;
+            } else {
+                // Tab RIWAYAT: List Semua Data Diurutin by Tanggal
                 
-                // Sort item dari yang terbaru (No paling besar)
-                data.items.sort((a,b) => b.no - a.no);
+                // Hitung total hutang aktif juga walau di tab riwayat biar statnya ga 0
+                globalData.forEach(item => { totalAkumulasiAktif += parseFloat(item.nominal || 0); });
+                document.getElementById('statTotalHutang').innerText = formatRupiah(totalAkumulasiAktif);
 
-                htmlString += `
-                <details class="bg-[#10121d] border border-[#1e2235] rounded-xl mb-3 overflow-hidden group">
-                    <summary class="flex justify-between items-center p-4 cursor-pointer outline-none hover:bg-[#161925] transition-colors">
-                        <div class="flex flex-col">
-                            <span class="font-bold text-slate-200 text-sm">${nama}</span>
-                            <span class="text-[10px] text-slate-500">${data.items.length} transaksi</span>
+                // Clone array biar data asli ga berubah, lalu sort berdasarkan kalender tanggal
+                let historyData = [...globalData].sort((a, b) => {
+                    let timeA = parseTanggalCustom(a.tanggal);
+                    let timeB = parseTanggalCustom(b.tanggal);
+                    // Kalau tanggalnya sama persis, urutin dari yang terbaru input
+                    if (timeB === timeA) return b.no - a.no;
+                    return timeB - timeA;
+                });
+
+                if (historyData.length === 0) {
+                    container.innerHTML = `<div class="text-center text-xs text-slate-500 py-10">Belum ada riwayat transaksi.</div>`;
+                    return;
+                }
+
+                let htmlString = '<div class="space-y-2">';
+                historyData.forEach(item => {
+                    const nom = parseFloat(item.nominal || 0);
+                    const isBayar = nom < 0;
+                    
+                    htmlString += `
+                    <div class="p-3 bg-[#10121d] border border-[#1e2235] rounded-xl flex justify-between items-center group hover:border-slate-700 transition">
+                        <div>
+                            <div class="flex flex-col">
+                                <span class="text-sm font-bold text-slate-200">${item.peminjam || '-'}</span>
+                                <span class="text-[11px] text-slate-400">#${item.no} • ${item.tanggal} • <span class="${isBayar ? 'text-emerald-400' : 'text-rose-400'} font-medium">${item.via || '-'}</span></span>
+                            </div>
                         </div>
                         <div class="flex items-center gap-4">
-                            <span class="font-display font-bold num text-sm ${isLunas ? 'text-emerald-400' : 'text-rose-400'}">
-                                ${formatRupiah(data.total)}
-                            </span>
-                            <button onclick="openDeleteModal(event, null, '${nama}', null, true)" class="bg-rose-500/10 text-rose-500 border border-rose-500/20 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-rose-600 hover:text-white transition-colors">
-                                Lunas / Hapus
-                            </button>
-                            <span class="text-slate-500 text-xs group-open:rotate-180 transition-transform">▼</span>
-                        </div>
-                    </summary>
-                    
-                    <div class="px-4 pb-4 pt-2 border-t border-[#1e2235]/50 bg-[#090a10]">
-                        ${data.items.map(item => `
-                            <div class="flex justify-between items-center py-2.5 border-b border-[#1e2235]/30 last:border-0">
-                                <div class="flex flex-col">
-                                    <span class="text-[11px] text-slate-400">#${item.no} •${cleanTanggal(item.tanggal)}</span>
-                                    <span class="text-xs text-slate-200 font-medium">${item.via || '-'}</span>
-                                </div>
-                                <div class="flex items-center gap-4">
-                                    <span class="text-xs font-bold num ${item.nominal < 0 ? 'text-emerald-400' : 'text-rose-400'}">
-                                        ${formatRupiah(item.nominal)}
-                                    </span>
-                                    <button onclick="openDeleteModal(event, ${item.no}, '${item.peminjam}', '${formatRupiah(item.nominal)}', false)" class="text-[10px] bg-[#1e2235] text-slate-400 hover:text-rose-400 px-2 py-1 rounded transition">❌</button>
-                                </div>
+                            <div class="num font-bold text-sm ${isBayar ? 'text-emerald-400' : 'text-rose-400'} text-right w-24">
+                                ${formatRupiah(nom)}
                             </div>
-                        `).join('')}
-                    </div>
-                </details>`;
-            });
-
-            container.innerHTML = htmlString;
+                            <button onclick="openDeleteModal(event, ${item.no}, '${item.peminjam}', '${formatRupiah(nom)}', false)" class="text-[10px] bg-[#1e2235] text-slate-400 hover:text-rose-400 px-2 py-1.5 rounded transition">❌</button>
+                        </div>
+                    </div>`;
+                });
+                htmlString += '</div>';
+                container.innerHTML = htmlString;
+            }
         }
 
         function handleSubmit(e) {
@@ -426,8 +479,8 @@
             globalData.push(newItem);
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(globalData));
             
-            // Pindah ke tab aktif kalau lagi di tab lunas biar kelihatan inputannya
-            if(activeTab === 'lunas' && nomNum > 0) switchTab('aktif'); 
+            // Pindah ke tab aktif kalau lagi di tab lunas/riwayat dan hutangnya > 0
+            if(activeTab === 'riwayat' && nomNum > 0) switchTab('aktif'); 
             else renderData();
 
             showToast("Tersimpan", "success");
