@@ -17,14 +17,24 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <style>
-        html, body { width: 100%; min-height: 100vh; margin: 0; background: #090a10; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+        :root {
+            --bg: #08090e;
+            --card: #12131d;
+            --card-soft: #0d0e16;
+            --line: #1f2233;
+            --accent: #fb4d67;
+            --accent-soft: rgba(251, 77, 103, 0.12);
+            --ok: #34d399;
+            --muted: #8890a3;
+        }
+        html, body { width: 100%; min-height: 100vh; margin: 0; background: var(--bg); color: #eef0f5; font-family: 'Inter', sans-serif; }
         .font-display { font-family: 'Space Grotesk', sans-serif; }
         .num { font-family: 'Space Grotesk', sans-serif; font-variant-numeric: tabular-nums; }
-        .porto-card { background: #10121d; border: 1px solid #1e2235; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
-        .porto-input { background: #090a10; border: 1px solid #23273c; color: #f1f5f9; }
-        .porto-input:focus { border-color: #f43f5e; outline: none; }
+        .porto-card { background: var(--card); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+        .porto-input { background: var(--card-soft); border: 1px solid var(--line); color: #f4f5f9; transition: border-color .15s ease; }
+        .porto-input:focus { border-color: var(--accent); outline: none; }
         .custom-scroll::-webkit-scrollbar { width: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #23273c; border-radius: 8px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
         @keyframes riseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         .rise-in { animation: riseIn .3s ease-out both; }
         details > summary { list-style: none; }
@@ -36,34 +46,50 @@
             opacity: 0; z-index: 9999; pointer-events: none;
         }
         #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        #errorBanner { display: none; }
+        #errorBanner.show { display: flex; }
     </style>
 </head>
 <body class="p-3 md:p-6 flex justify-center pb-20">
-    <div class="w-full max-w-[1600px] grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        
+    <div class="w-full max-w-[1440px] grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
         <!-- KOLOM KIRI: Header & Form -->
-        <div class="lg:col-span-4 space-y-5 lg:sticky lg:top-6">
-            <div class="porto-card px-4 py-3 rounded-xl flex items-center gap-2.5 border-l-4 border-l-rose-500">
-                <div class="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 font-bold text-base">💸</div>
-                <div>
-                    <h1 class="font-display text-base font-bold text-white tracking-tight leading-none">CATATAN HUTANG</h1>
-                    <p class="text-[10px] text-slate-400 mt-0.5">Catatan Pinjaman & Kas</p>
+        <div class="lg:col-span-4 space-y-4 lg:sticky lg:top-6">
+            <div class="porto-card px-5 py-4 rounded-2xl flex items-center gap-3">
+                <div class="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center text-lg" style="background: var(--accent-soft); color: var(--accent);">💸</div>
+                <div class="min-w-0">
+                    <h1 class="font-display text-[15px] font-semibold text-white leading-tight truncate">Catatan Hutang</h1>
+                    <p class="text-[11px] mt-0.5" style="color: var(--muted);">Pinjaman &amp; cicilan, tersinkron ke Sheet</p>
+                </div>
+            </div>
+
+            <div id="errorBanner" class="items-start gap-2.5 px-4 py-3 rounded-xl text-xs" style="background: rgba(251,77,103,0.1); border: 1px solid rgba(251,77,103,0.35); color: #fda4b0;">
+                <span class="mt-px">⚠️</span>
+                <div class="flex-1">
+                    <div id="errorBannerText" class="font-medium leading-snug">Gagal menyambung ke server.</div>
+                    <button onclick="loadData()" class="mt-1.5 text-[11px] font-semibold underline underline-offset-2 hover:text-white">Coba lagi</button>
                 </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
-                <div class="porto-card p-4 rounded-xl text-center">
-                    <div class="text-[10px] uppercase font-semibold text-slate-400 mb-1">Total Hutang Aktif</div>
-                    <div id="statTotalHutang" class="num text-base font-bold text-rose-400">Rp 0</div>
+                <div class="porto-card p-4 rounded-2xl flex items-center gap-3">
+                    <div class="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center text-sm" style="background: var(--accent-soft); color: var(--accent);">Rp</div>
+                    <div class="min-w-0">
+                        <div class="text-[11px] leading-none mb-1.5" style="color: var(--muted);">Hutang aktif</div>
+                        <div id="statTotalHutang" class="num text-[15px] font-semibold leading-none truncate" style="color: var(--accent);">Rp 0</div>
+                    </div>
                 </div>
-                <div class="porto-card p-4 rounded-xl text-center">
-                    <div class="text-[10px] uppercase font-semibold text-slate-400 mb-1">Jumlah Transaksi</div>
-                    <div id="statCount" class="num text-base font-bold text-slate-200">0</div>
+                <div class="porto-card p-4 rounded-2xl flex items-center gap-3">
+                    <div class="w-9 h-9 shrink-0 rounded-lg flex items-center justify-center text-sm bg-white/5 text-slate-300">#</div>
+                    <div class="min-w-0">
+                        <div class="text-[11px] leading-none mb-1.5" style="color: var(--muted);">Transaksi</div>
+                        <div id="statCount" class="num text-[15px] font-semibold leading-none text-slate-200">0</div>
+                    </div>
                 </div>
             </div>
 
             <form id="hutangForm" onsubmit="handleSubmit(event)" class="porto-card p-5 rounded-2xl space-y-4" autocomplete="off">
-                <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400">Input Pinjaman / Cicilan</h2>
+                <h2 class="text-[13px] font-semibold" style="color: var(--accent);">Input pinjaman / cicilan</h2>
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Tanggal</label>
                     <input type="text" id="tanggal" required class="w-full porto-input rounded-xl px-3.5 py-2.5" autocomplete="off">
@@ -92,18 +118,18 @@
         <!-- KOLOM KANAN: Daftar Grouping & Tabs -->
         <div class="lg:col-span-8 space-y-4 lg:sticky lg:top-6">
             <div class="porto-card p-5 rounded-2xl space-y-4 min-h-[500px]">
-                
-                <div class="flex p-1 bg-[#090a10] rounded-xl border border-[#23273c] relative">
-                    <button onclick="switchTab('aktif')" id="tabAktif" class="flex-1 py-2 text-sm font-bold text-rose-400 bg-[#1e2235] rounded-lg transition-all z-10 shadow">Hutang Aktif</button>
-                    <button onclick="switchTab('riwayat')" id="tabRiwayat" class="flex-1 py-2 text-sm font-bold text-slate-500 rounded-lg transition-all z-10 hover:text-slate-300">Riwayat</button>
+
+                <div class="flex p-1 rounded-xl border relative" style="background: var(--card-soft); border-color: var(--line);">
+                    <button onclick="switchTab('aktif')" id="tabAktif" class="flex-1 py-2 text-sm font-semibold rounded-lg transition-all z-10" style="color: var(--accent); background: var(--card); box-shadow: 0 4px 12px rgba(0,0,0,0.25);">Hutang aktif</button>
+                    <button onclick="switchTab('riwayat')" id="tabRiwayat" class="flex-1 py-2 text-sm font-semibold rounded-lg transition-all z-10 text-slate-500 hover:text-slate-300">Riwayat</button>
                 </div>
 
-                <div class="flex justify-between items-center px-1 mb-1">
-                    <h2 id="listHeaderTitle" class="text-xs font-bold uppercase tracking-wider text-rose-400">Daftar Hutang Aktif</h2>
-                    <div class="flex items-center gap-3">
-                        <div id="loading" class="text-[10px] font-bold text-amber-400 hidden animate-pulse">Memuat...</div>
+                <div class="flex justify-between items-center px-1 mb-1 gap-3">
+                    <h2 id="listHeaderTitle" class="text-[13px] font-semibold truncate" style="color: var(--accent);">Daftar hutang aktif</h2>
+                    <div class="flex items-center gap-3 shrink-0">
+                        <div id="loading" class="text-[11px] font-medium text-amber-400 hidden animate-pulse">Memuat…</div>
                         <div id="sortContainer" class="flex items-center">
-                            <select id="sortAktif" onchange="renderData()" class="bg-[#1e2235] text-[10px] text-slate-300 border border-[#23273c] rounded px-2 py-1 outline-none font-medium cursor-pointer">
+                            <select id="sortAktif" onchange="renderData()" class="text-[11px] text-slate-300 border rounded-lg px-2.5 py-1.5 outline-none font-medium cursor-pointer" style="background: var(--card-soft); border-color: var(--line);">
                                 <option value="terbaru">⏳ Terbaru</option>
                                 <option value="terbesar">💰 Terbesar</option>
                                 <option value="nama">🔤 Nama (A-Z)</option>
@@ -111,7 +137,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div id="groupedListContainer" class="space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto pr-1 custom-scroll">
                     <!-- List dirender lewat JavaScript -->
                 </div>
@@ -142,7 +168,7 @@
     </div>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbzCqbpghUc4uyRVItCG8I4Ri8F5eio9xVV-6SghLAk9VemN3hPoTy6Ioya-vGcoCaGl6Q/exec";
+        const API_URL = "https://script.google.com/macros/s/AKfycbxGZZdwz313rSsFpHQrQcsoXYzhgVcgWffx_WIq-to77DDenZ16vHnBXnXp3wFgdTF4BA/exec";
         const LOCAL_STORAGE_KEY = "hutang_cached_data";
         const VIA_OPTIONS = ["Seabank", "Dana", "BCA", "Cash", "GoPay", "OVO", "Mandiri", "BRI", "ShopeePay"];
 
@@ -269,19 +295,47 @@
             return tglStr;
         }
 
+        function showErrorBanner(message) {
+            const banner = document.getElementById('errorBanner');
+            document.getElementById('errorBannerText').innerText = message;
+            banner.classList.add('show');
+        }
+
+        function hideErrorBanner() {
+            document.getElementById('errorBanner').classList.remove('show');
+        }
+
         function loadData() {
-            if (globalData.length === 0) document.getElementById('loading').classList.remove('hidden');
+            const loadingEl = document.getElementById('loading');
+            if (globalData.length === 0) {
+                loadingEl.classList.remove('hidden');
+                loadingEl.innerText = "Memuat…";
+            }
             fetch(API_URL + "?action=read")
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) throw new Error(`Server balas status ${res.status}`);
+                    return res.json();
+                })
                 .then(data => {
-                    document.getElementById('loading').classList.add('hidden');
+                    loadingEl.classList.add('hidden');
+                    if (!Array.isArray(data)) {
+                        throw new Error((data && data.message) || "Format data dari server tidak sesuai");
+                    }
                     globalData = data;
                     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+                    hideErrorBanner();
                     renderData();
                 })
-                .catch(err => { 
+                .catch(err => {
                     console.error("Gagal load:", err);
-                    document.getElementById('loading').innerText = "Gagal!"; 
+                    loadingEl.classList.add('hidden');
+                    const isNotFound = String(err.message || "").includes("404");
+                    showErrorBanner(
+                        isNotFound
+                            ? "URL Apps Script tidak ditemukan (404). Deployment web app-nya kemungkinan sudah tidak aktif — deploy ulang dan perbarui API_URL."
+                            : `Gagal mengambil data terbaru: ${err.message}. Menampilkan data tersimpan di perangkat ini.`
+                    );
+                    renderData();
                 });
         }
 
@@ -293,14 +347,20 @@
             const sortElement = document.getElementById('sortContainer');
 
             if(tab === 'aktif') {
-                btnAktif.className = "flex-1 py-2 text-sm font-bold text-rose-400 bg-[#1e2235] rounded-lg transition-all z-10 shadow";
-                btnRiwayat.className = "flex-1 py-2 text-sm font-bold text-slate-500 rounded-lg transition-all z-10 hover:text-slate-300";
-                headerTitle.innerText = "Daftar Hutang Aktif";
+                btnAktif.className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all z-10";
+                btnAktif.style.cssText = "color: var(--accent); background: var(--card); box-shadow: 0 4px 12px rgba(0,0,0,0.25);";
+                btnRiwayat.className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all z-10 text-slate-500 hover:text-slate-300";
+                btnRiwayat.style.cssText = "";
+                headerTitle.innerText = "Daftar hutang aktif";
+                headerTitle.style.color = "var(--accent)";
                 sortElement.classList.remove('hidden');
             } else {
-                btnRiwayat.className = "flex-1 py-2 text-sm font-bold text-amber-400 bg-[#1e2235] rounded-lg transition-all z-10 shadow";
-                btnAktif.className = "flex-1 py-2 text-sm font-bold text-slate-500 rounded-lg transition-all z-10 hover:text-slate-300";
-                headerTitle.innerText = "Semua Riwayat Transaksi";
+                btnRiwayat.className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all z-10";
+                btnRiwayat.style.cssText = "color: #fbbf24; background: var(--card); box-shadow: 0 4px 12px rgba(0,0,0,0.25);";
+                btnAktif.className = "flex-1 py-2 text-sm font-semibold rounded-lg transition-all z-10 text-slate-500 hover:text-slate-300";
+                btnAktif.style.cssText = "";
+                headerTitle.innerText = "Semua riwayat transaksi";
+                headerTitle.style.color = "#fbbf24";
                 sortElement.classList.add('hidden');
             }
             renderData();
@@ -336,7 +396,7 @@
                 document.getElementById('statTotalHutang').innerText = formatRupiah(totalAkumulasiAktif);
 
                 if (groupKeys.length === 0) {
-                    container.innerHTML = `<div class="text-center text-xs text-slate-500 py-10">Belum ada catatan hutang aktif.</div>`;
+                    container.innerHTML = `<div class="text-center text-xs py-14" style="color: var(--muted);"><div class="text-2xl mb-2">🗒️</div>Belum ada catatan hutang aktif.</div>`;
                     return;
                 }
 
@@ -367,7 +427,7 @@
                     data.items.sort((a,b) => b.no - a.no);
 
                     htmlString += `
-                    <details class="bg-[#10121d] border border-[#1e2235] rounded-xl mb-3 overflow-hidden group">
+                    <details class="bg-[#12131d] border border-[#1f2233] rounded-2xl mb-3 overflow-hidden group">
                         <summary class="flex justify-between items-center p-4 cursor-pointer outline-none hover:bg-[#161925] transition-colors">
                             <div class="flex flex-col">
                                 <span class="font-bold text-slate-200 text-sm">${nama}</span>
@@ -416,7 +476,7 @@
                 });
 
                 if (historyData.length === 0) {
-                    container.innerHTML = `<div class="text-center text-xs text-slate-500 py-10">Belum ada riwayat transaksi.</div>`;
+                    container.innerHTML = `<div class="text-center text-xs py-14" style="color: var(--muted);"><div class="text-2xl mb-2">🗂️</div>Belum ada riwayat transaksi.</div>`;
                     return;
                 }
 
@@ -426,7 +486,7 @@
                     const isBayar = nom < 0;
                     
                     htmlString += `
-                    <div class="p-3 bg-[#10121d] border border-[#1e2235] rounded-xl flex justify-between items-center group hover:border-slate-700 transition">
+                    <div class="p-3.5 bg-[#12131d] border border-[#1f2233] rounded-2xl flex justify-between items-center group hover:border-slate-700 transition">
                         <div>
                             <div class="flex flex-col">
                                 <span class="text-sm font-bold text-slate-200">${item.peminjam || '-'}</span>
@@ -486,7 +546,10 @@
             // Fetch add dibikin no-cors lagi
             fetch(`${API_URL}?action=add&tanggal=${encTgl}&peminjam=${encPeminjam}&via=${encVia}&nominal=${encNom}`, { mode: 'no-cors' })
                 .then(() => setTimeout(loadData, 500))
-                .catch(err => console.error("Error Add:", err)); 
+                .catch(err => {
+                    console.error("Error Add:", err);
+                    showErrorBanner(`Gagal sinkron ke server: ${err.message}. Data ini baru tersimpan di perangkat ini.`);
+                });
         }
 
         function openDeleteModal(e, no, peminjam, nominalStr, isDeleteAll = false) {
@@ -543,6 +606,7 @@
                     await fetch(`${API_URL}?action=deletePerson&person=${encodeURIComponent(targetPerson)}`, { mode: 'no-cors' });
                 } catch(err) {
                     console.error("Error Delete Person:", err);
+                    showErrorBanner(`Gagal sinkron hapus ke server: ${err.message}.`);
                 }
 
                 setTimeout(loadData, 1000);
@@ -557,6 +621,7 @@
                     await fetch(`${API_URL}?action=delete&no=${encodeURIComponent(targetNo)}`, { mode: 'no-cors' });
                 } catch(err) {
                     console.error("Error Delete:", err);
+                    showErrorBanner(`Gagal sinkron hapus ke server: ${err.message}.`);
                 }
 
                 setTimeout(loadData, 500);
