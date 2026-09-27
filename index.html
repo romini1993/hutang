@@ -29,7 +29,11 @@
         @keyframes riseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         .rise-in { animation: riseIn .3s ease-out both; }
 
-        /* Toast Animation Tepat di Pertengahan Antara Ujung Atas & Tengah Layar (Top 20%) */
+        /* Hide default details arrow */
+        details > summary { list-style: none; }
+        details > summary::-webkit-details-marker { display: none; }
+
+        /* Toast Animation */
         #toast {
             position: fixed;
             top: 20%;
@@ -63,11 +67,11 @@
 
             <div class="grid grid-cols-2 gap-3">
                 <div class="porto-card p-4 rounded-xl text-center">
-                    <div class="text-[10px] uppercase font-semibold text-slate-400 mb-1">Total Hutang</div>
+                    <div class="text-[10px] uppercase font-semibold text-slate-400 mb-1">Total Hutang Aktif</div>
                     <div id="statTotalHutang" class="num text-base font-bold text-rose-400">Rp 0</div>
                 </div>
                 <div class="porto-card p-4 rounded-xl text-center">
-                    <div class="text-[10px] uppercase font-semibold text-slate-400 mb-1">Jumlah Catatan</div>
+                    <div class="text-[10px] uppercase font-semibold text-slate-400 mb-1">Jumlah Transaksi</div>
                     <div id="statCount" class="num text-base font-bold text-slate-200">0</div>
                 </div>
             </div>
@@ -108,33 +112,31 @@
             </form>
         </div>
 
-        <!-- KOLOM TENGAH: Rekap Per Peminjam -->
-        <div class="lg:col-span-4 space-y-4 lg:sticky lg:top-6">
-            <div class="porto-card p-5 rounded-2xl space-y-3">
-                <div class="flex justify-between items-center mb-2">
-                    <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400">Ringkasan</h2>
-                    <span class="text-[10px] text-slate-400">Klik nama untuk filter</span>
+        <!-- KOLOM KANAN: Daftar Grouping & Tabs -->
+        <div class="lg:col-span-8 space-y-4 lg:sticky lg:top-6">
+            <div class="porto-card p-5 rounded-2xl space-y-4 min-h-[500px]">
+                
+                <!-- Tab Pilihan -->
+                <div class="flex p-1 bg-[#090a10] rounded-xl border border-[#23273c] relative">
+                    <button onclick="switchTab('aktif')" id="tabAktif" class="flex-1 py-2 text-sm font-bold text-rose-400 bg-[#1e2235] rounded-lg transition-all z-10 shadow">Belum Lunas</button>
+                    <button onclick="switchTab('lunas')" id="tabLunas" class="flex-1 py-2 text-sm font-bold text-slate-500 rounded-lg transition-all z-10 hover:text-slate-300">Udah Lunas</button>
                 </div>
-                <div id="summaryBox" class="text-xs text-slate-300 space-y-2"></div>
-            </div>
-        </div>
 
-        <!-- KOLOM KANAN: Daftar Riwayat -->
-        <div class="lg:col-span-4 space-y-4 lg:sticky lg:top-6">
-            <div class="porto-card p-5 rounded-2xl space-y-3">
-                <div class="flex justify-between items-center mb-2">
-                    <h2 id="listHeaderTitle" class="text-xs font-bold uppercase tracking-wider text-rose-400">Daftar Pinjaman</h2>
-                    <button id="resetFilterBtn" onclick="filterByPerson(null)" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded hidden border border-slate-700">
-                        🔄 Semua Nama
-                    </button>
+                <div class="flex justify-between items-center px-1">
+                    <h2 id="listHeaderTitle" class="text-xs font-bold uppercase tracking-wider text-rose-400">Daftar Hutang Aktif</h2>
+                    <div id="loading" class="text-xs text-amber-400 hidden animate-pulse">Memuat data dari Sheet...</div>
                 </div>
-                <div id="loading" class="text-center text-xs text-slate-500 py-6 hidden">Memuat data dari Sheet...</div>
-                <div id="hutangList" class="space-y-2 max-h-[calc(100vh-140px)] overflow-y-auto pr-1 custom-scroll"></div>
+                
+                <!-- Container List Expand/Collapse -->
+                <div id="groupedListContainer" class="space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto pr-1 custom-scroll">
+                    <!-- List dirender lewat JavaScript -->
+                </div>
+
             </div>
         </div>
     </div>
 
-    <!-- POPUP MODAL HAPUS MODERN -->
+    <!-- POPUP MODAL HAPUS -->
     <div id="deleteModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="porto-card w-full max-w-sm p-6 rounded-2xl border border-rose-500/30 shadow-2xl space-y-4 rise-in text-center relative">
             <div class="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center text-xl font-bold mx-auto">
@@ -155,7 +157,7 @@
         </div>
     </div>
 
-    <!-- TOAST NOTIFICATION FLOATING (POSISI 20% DARI ATAS) -->
+    <!-- TOAST NOTIFICATION -->
     <div id="toast" class="px-5 py-3 rounded-2xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2">
         <span id="toastIcon"></span>
         <span id="toastText"></span>
@@ -164,12 +166,12 @@
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbzFDDLFAnahJ7lETXrLTQQApqvQDHCTePOWZUt5ppYYSYDcT9eNk2aZKzCxoINXun7x/exec";
         const LOCAL_STORAGE_KEY = "hutang_cached_data";
-
         const VIA_OPTIONS = ["Seabank", "Dana", "BCA", "Cash", "GoPay", "OVO", "Mandiri", "BRI", "ShopeePay"];
 
         let globalData = [];
-        let selectedFilterName = null;
+        let activeTab = 'aktif'; 
         let deleteTargetNo = null;
+        let deleteTargetPerson = null; 
         let currentSuggestion = "";
         let toastTimeout = null;
 
@@ -211,18 +213,11 @@
                 toast.className = "px-5 py-3 rounded-2xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2 bg-rose-500/20 border-rose-500/40 text-rose-300 show";
             }
 
-            toastTimeout = setTimeout(() => {
-                toast.classList.remove('show');
-            }, 1800);
+            toastTimeout = setTimeout(() => toast.classList.remove('show'), 1800);
         }
 
-        function handlePeminjamInput(input) {
-            input.value = input.value.toUpperCase();
-        }
-
-        function capitalizeWords(str) {
-            return str.replace(/\b\w/g, l => l.toUpperCase());
-        }
+        function handlePeminjamInput(input) { input.value = input.value.toUpperCase(); }
+        function capitalizeWords(str) { return str.replace(/\b\w/g, l => l.toUpperCase()); }
 
         function handleViaInput(input) {
             let val = input.value;
@@ -232,7 +227,6 @@
             if (val.trim() !== "") {
                 val = capitalizeWords(val);
                 input.value = val;
-
                 const match = VIA_OPTIONS.find(opt => opt.toLowerCase().startsWith(val.toLowerCase()));
                 if (match) {
                     currentSuggestion = match;
@@ -286,19 +280,14 @@
             if (typeof tglStr === 'string' && tglStr.includes('T')) {
                 const d = new Date(tglStr);
                 if (!isNaN(d.getTime())) {
-                    const day = String(d.getDate()).padStart(2, '0');
-                    const month = String(d.getMonth() + 1).padStart(2, '0');
-                    const year = d.getFullYear();
-                    return `${day}/${month}/${year}`;
+                    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
                 }
             }
             return tglStr;
         }
 
         function loadData() {
-            if (globalData.length === 0) {
-                document.getElementById('loading').classList.remove('hidden');
-            }
+            if (globalData.length === 0) document.getElementById('loading').classList.remove('hidden');
             fetch(API_URL + "?action=read")
                 .then(res => res.json())
                 .then(data => {
@@ -307,100 +296,111 @@
                     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
                     renderData();
                 })
-                .catch(() => {
-                    document.getElementById('loading').innerText = "Gagal memuat data.";
-                });
+                .catch(() => { document.getElementById('loading').innerText = "Gagal memuat data."; });
         }
 
-        function filterByPerson(nama) {
-            selectedFilterName = nama;
+        function switchTab(tab) {
+            activeTab = tab;
+            const btnAktif = document.getElementById('tabAktif');
+            const btnLunas = document.getElementById('tabLunas');
+            const headerTitle = document.getElementById('listHeaderTitle');
+
+            if(tab === 'aktif') {
+                btnAktif.className = "flex-1 py-2 text-sm font-bold text-rose-400 bg-[#1e2235] rounded-lg transition-all z-10 shadow";
+                btnLunas.className = "flex-1 py-2 text-sm font-bold text-slate-500 rounded-lg transition-all z-10 hover:text-slate-300";
+                headerTitle.innerText = "Daftar Hutang Aktif";
+            } else {
+                btnLunas.className = "flex-1 py-2 text-sm font-bold text-emerald-400 bg-[#1e2235] rounded-lg transition-all z-10 shadow";
+                btnAktif.className = "flex-1 py-2 text-sm font-bold text-slate-500 rounded-lg transition-all z-10 hover:text-slate-300";
+                headerTitle.innerText = "Riwayat Lunas";
+            }
             renderData();
         }
 
         function renderData() {
-            const listEl = document.getElementById('hutangList');
-            const summaryEl = document.getElementById('summaryBox');
-            const headerTitle = document.getElementById('listHeaderTitle');
-            const resetBtn = document.getElementById('resetFilterBtn');
-
-            listEl.innerHTML = '';
-            summaryEl.innerHTML = '';
+            const container = document.getElementById('groupedListContainer');
+            container.innerHTML = '';
             
-            let totalAkumulasi = 0;
+            let totalAkumulasiAktif = 0;
             let rekapPeminjam = {};
 
+            // Grouping by Nama
             globalData.forEach(item => {
-                const nom = parseFloat(item.nominal || 0);
-                totalAkumulasi += nom;
-
                 const nama = (item.peminjam || 'TANPA NAMA').toUpperCase().trim();
+                const nom = parseFloat(item.nominal || 0);
+
                 if (!rekapPeminjam[nama]) {
-                    rekapPeminjam[nama] = 0;
+                    rekapPeminjam[nama] = { total: 0, items: [] };
                 }
-                rekapPeminjam[nama] += nom;
+                rekapPeminjam[nama].total += nom;
+                rekapPeminjam[nama].items.push(item);
             });
 
-            document.getElementById('statTotalHutang').innerText = formatRupiah(totalAkumulasi);
             document.getElementById('statCount').innerText = globalData.length;
 
-            const keys = Object.keys(rekapPeminjam);
-            if (keys.length === 0) {
-                summaryEl.innerHTML = `<div class="p-3 bg-[#090a10] rounded-xl border border-[#23273c] text-slate-500 text-center">Belum ada catatan.</div>`;
-            } else {
-                keys.forEach(nama => {
-                    const isSelected = selectedFilterName === nama;
-                    const totalNom = rekapPeminjam[nama];
-                    const box = document.createElement('div');
-                    box.className = `p-3 rounded-xl border cursor-pointer transition flex justify-between items-center ${
-                        isSelected 
-                        ? 'bg-rose-500/10 border-rose-500 text-white font-bold ring-1 ring-rose-500' 
-                        : 'bg-[#090a10] border-[#23273c] hover:border-slate-600 text-slate-200'
-                    }`;
-                    box.onclick = () => filterByPerson(isSelected ? null : nama);
-                    box.innerHTML = `
-                        <span class="font-semibold">${nama}</span>
-                        <b class="${totalNom < 0 ? 'text-emerald-400' : 'text-rose-400'} font-bold num text-sm">${formatRupiah(totalNom)}</b>
-                    `;
-                    summaryEl.appendChild(box);
-                });
-            }
+            let htmlString = '';
+            let groupKeys = Object.keys(rekapPeminjam).filter(nama => {
+                const total = rekapPeminjam[nama].total;
+                if(activeTab === 'aktif') {
+                    if (total > 0) totalAkumulasiAktif += total;
+                    return total > 0;
+                } else {
+                    return total <= 0;
+                }
+            });
 
-            let filteredData = globalData;
-            if (selectedFilterName) {
-                filteredData = globalData.filter(item => (item.peminjam || '').toUpperCase().trim() === selectedFilterName);
-                headerTitle.innerText = `Pinjaman: ${selectedFilterName}`;
-                resetBtn.classList.remove('hidden');
-            } else {
-                headerTitle.innerText = "Daftar Pinjaman";
-                resetBtn.classList.add('hidden');
-            }
+            document.getElementById('statTotalHutang').innerText = formatRupiah(totalAkumulasiAktif);
 
-            if (filteredData.length === 0) {
-                listEl.innerHTML = `<div class="text-center text-xs text-slate-500 py-6">Tidak ada catatan pinjaman.</div>`;
+            if (groupKeys.length === 0) {
+                container.innerHTML = `<div class="text-center text-xs text-slate-500 py-10">Belum ada data di tab ini.</div>`;
                 return;
             }
 
-            const reversedData = filteredData.slice().reverse();
+            groupKeys.forEach(nama => {
+                const data = rekapPeminjam[nama];
+                const isLunas = data.total <= 0;
+                
+                // Sort item dari yang terbaru (No paling besar)
+                data.items.sort((a,b) => b.no - a.no);
 
-            reversedData.forEach((item, index) => {
-                const nom = parseFloat(item.nominal || 0);
-                const noDisplay = reversedData.length - index;
-                const isBayar = nom < 0;
-
-                const card = document.createElement('div');
-                card.className = "p-3 bg-[#090a10] border border-[#23273c] rounded-xl flex justify-between items-center";
-                card.innerHTML = `
-                    <div>
-                        <div class="text-xs text-slate-400">#${noDisplay} • ${cleanTanggal(item.tanggal)} • <span class="${isBayar ? 'text-emerald-400' : 'text-rose-400'} font-medium">${item.via || '-'}</span></div>
-                        <div class="text-sm font-semibold text-white">${item.peminjam || '-'}</div>
+                htmlString += `
+                <details class="bg-[#10121d] border border-[#1e2235] rounded-xl mb-3 overflow-hidden group">
+                    <summary class="flex justify-between items-center p-4 cursor-pointer outline-none hover:bg-[#161925] transition-colors">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-slate-200 text-sm">${nama}</span>
+                            <span class="text-[10px] text-slate-500">${data.items.length} transaksi</span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="font-display font-bold num text-sm ${isLunas ? 'text-emerald-400' : 'text-rose-400'}">
+                                ${formatRupiah(data.total)}
+                            </span>
+                            <button onclick="openDeleteModal(event, null, '${nama}', null, true)" class="bg-rose-500/10 text-rose-500 border border-rose-500/20 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-rose-600 hover:text-white transition-colors">
+                                Lunas / Hapus
+                            </button>
+                            <span class="text-slate-500 text-xs group-open:rotate-180 transition-transform">▼</span>
+                        </div>
+                    </summary>
+                    
+                    <div class="px-4 pb-4 pt-2 border-t border-[#1e2235]/50 bg-[#090a10]">
+                        ${data.items.map(item => `
+                            <div class="flex justify-between items-center py-2.5 border-b border-[#1e2235]/30 last:border-0">
+                                <div class="flex flex-col">
+                                    <span class="text-[11px] text-slate-400">#${item.no} •${cleanTanggal(item.tanggal)}</span>
+                                    <span class="text-xs text-slate-200 font-medium">${item.via || '-'}</span>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <span class="text-xs font-bold num ${item.nominal < 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                                        ${formatRupiah(item.nominal)}
+                                    </span>
+                                    <button onclick="openDeleteModal(event, ${item.no}, '${item.peminjam}', '${formatRupiah(item.nominal)}', false)" class="text-[10px] bg-[#1e2235] text-slate-400 hover:text-rose-400 px-2 py-1 rounded transition">❌</button>
+                                </div>
+                            </div>
+                        `).join('')}
                     </div>
-                    <div class="text-right">
-                        <div class="num font-bold ${isBayar ? 'text-emerald-400' : 'text-rose-400'}">${formatRupiah(nom)}</div>
-                        <button onclick="openDeleteModal(${item.no}, '${item.peminjam}', '${formatRupiah(nom)}')" class="text-[10px] bg-rose-600/20 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded mt-1 hover:bg-rose-600/40">Lunas / Hapus</button>
-                    </div>
-                `;
-                listEl.appendChild(card);
+                </details>`;
             });
+
+            container.innerHTML = htmlString;
         }
 
         function handleSubmit(e) {
@@ -416,7 +416,7 @@
             const nomNum = parseFloat(rawNominal || 0);
 
             const newItem = {
-                no: globalData.length + 1,
+                no: (globalData.length > 0 ? Math.max(...globalData.map(i => i.no)) : 0) + 1,
                 tanggal: tgl,
                 peminjam: peminjam,
                 via: via,
@@ -425,7 +425,10 @@
 
             globalData.push(newItem);
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(globalData));
-            renderData();
+            
+            // Pindah ke tab aktif kalau lagi di tab lunas biar kelihatan inputannya
+            if(activeTab === 'lunas' && nomNum > 0) switchTab('aktif'); 
+            else renderData();
 
             showToast("Tersimpan", "success");
 
@@ -442,19 +445,31 @@
                 .then(() => loadData());
         }
 
-        function openDeleteModal(no, peminjam, nominalStr) {
+        // Modal Handler (Bisa hapus satu item, atau hapus semua sekalian)
+        function openDeleteModal(e, no, peminjam, nominalStr, isDeleteAll = false) {
+            if(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
             deleteTargetNo = no;
-            document.getElementById('deleteModalText').innerText = `Hapus catatan pinjaman ${peminjam} sebesar ${nominalStr}?`;
+            deleteTargetPerson = isDeleteAll ? peminjam : null;
+
+            if (isDeleteAll) {
+                document.getElementById('deleteModalText').innerText = `Yakin mau hapus/lunasin SEMUA catatan atas nama ${peminjam}? Data bakal terhapus permanen.`;
+            } else {
+                document.getElementById('deleteModalText').innerText = `Hapus catatan pinjaman ${peminjam} sebesar ${nominalStr}?`;
+            }
+
             const modal = document.getElementById('deleteModal');
             modal.classList.remove('hidden');
             
-            setTimeout(() => {
-                document.getElementById('confirmDeleteBtn').focus();
-            }, 50);
+            setTimeout(() => document.getElementById('confirmDeleteBtn').focus(), 50);
         }
 
         function closeDeleteModal() {
             deleteTargetNo = null;
+            deleteTargetPerson = null;
             document.getElementById('deleteModal').classList.add('hidden');
         }
 
@@ -471,15 +486,31 @@
         });
 
         document.getElementById('confirmDeleteBtn').onclick = function() {
-            if (deleteTargetNo !== null) {
-                const targetNo = deleteTargetNo;
-                closeDeleteModal();
+            closeDeleteModal();
 
+            if (deleteTargetPerson) {
+                // HAPUS SEMUA DATA PER ORANG
+                const itemsToDelete = globalData.filter(item => (item.peminjam || '').toUpperCase().trim() === deleteTargetPerson);
+                const nosToDelete = itemsToDelete.map(i => i.no);
+
+                // Hapus di lokal biar instan
+                globalData = globalData.filter(item => (item.peminjam || '').toUpperCase().trim() !== deleteTargetPerson);
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(globalData));
+                renderData();
+                showToast(`Data ${deleteTargetPerson} terhapus`, "success");
+
+                // Hapus di Google Sheet (panggil request hapusnya barengan)
+                Promise.all(nosToDelete.map(no =>
+                    fetch(`${API_URL}?action=delete&no=${no}`)
+                )).then(() => loadData());
+
+            } else if (deleteTargetNo !== null) {
+                // HAPUS SATU ITEM AJA
+                const targetNo = deleteTargetNo;
                 globalData = globalData.filter(item => item.no !== targetNo);
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(globalData));
                 renderData();
-
-                showToast("Terhapus", "error");
+                showToast("Terhapus", "success");
 
                 fetch(`${API_URL}?action=delete&no=${targetNo}`)
                     .then(() => loadData());
