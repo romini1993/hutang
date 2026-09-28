@@ -128,26 +128,22 @@
                 </div>
             </div>
 
-            <form id="hutangForm" onsubmit="handleSubmit(event)" class="porto-card p-5 rounded-2xl space-y-4" autocomplete="off">
-                <h2 class="text-[13px] font-semibold" style="color: var(--accent);">Input pinjaman / cicilan</h2>
+            <form id="hutangForm" onsubmit="handleSubmit(event)" class="porto-card p-4 rounded-2xl space-y-2.5" autocomplete="off">
+                <h2 class="text-[13px] font-semibold mb-1" style="color: var(--accent);">Input pinjaman / cicilan</h2>
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">Tanggal</label>
-                    <input type="text" id="tanggal" required class="w-full porto-input rounded-xl px-3.5 py-2.5" autocomplete="off">
+                    <input type="text" id="tanggal" aria-label="Tanggal" required class="w-full porto-input rounded-xl px-3.5 py-2.5" autocomplete="off">
                 </div>
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">Siapa yang Pinjam</label>
-                    <input type="text" id="peminjam" required placeholder="Input Nama" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="handlePeminjamInput(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 font-medium">
+                    <input type="text" id="peminjam" aria-label="Peminjam" required placeholder="Peminjam" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="handlePeminjamInput(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 font-medium">
                 </div>
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">Via / Pembayaran</label>
                     <div class="relative w-full">
                         <div id="ghostVia" class="absolute inset-0 px-3.5 py-2.5 pointer-events-none text-slate-500 font-medium whitespace-pre overflow-hidden"></div>
-                        <input type="text" id="via" required placeholder="Contoh: Seabank, Dana, BCA, Cash" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="handleViaInput(this)" onkeydown="handleViaKeyDown(event, this)" onblur="acceptViaSuggestion(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 relative bg-transparent z-10">
+                        <input type="text" id="via" aria-label="Via / Pembayaran" required placeholder="Contoh: Seabank, Dana, BCA, Cash" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="handleViaInput(this)" onkeydown="handleViaKeyDown(event, this)" onblur="acceptViaSuggestion(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 relative bg-transparent z-10">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">Nominal (Rp) <span class="text-[10px] text-slate-500">(pakai - untuk cicil/bayar)</span></label>
-                    <input type="text" id="nominal" inputmode="decimal" required placeholder="50.000 atau -20.000" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="formatInputRibuan(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 num">
+                    <input type="text" id="nominal" aria-label="Nominal" inputmode="decimal" required placeholder="Nominal" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="formatInputRibuan(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 num">
                 </div>
                 <button type="submit" id="submitBtn" class="w-full btn-primary text-white font-semibold py-3 rounded-xl">
                     Simpan Catatan
