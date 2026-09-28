@@ -45,12 +45,6 @@
         .btn-primary { background: var(--accent); box-shadow: 0 10px 25px rgba(109,106,240,0.28); transition: background .18s ease, transform .12s ease; }
         .btn-primary:hover { background: var(--accent-hover); }
         .btn-primary:active { transform: scale(0.98); }
-        .btn-warn-soft { background: var(--warn-soft); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); transition: background .18s ease, color .18s ease, transform .12s ease; }
-        .btn-warn-soft:hover { background: var(--warn); color: #14100a; }
-        .btn-warn-soft:active { transform: scale(0.97); }
-        .btn-warn-solid { background: var(--warn); transition: background .18s ease, transform .12s ease; }
-        .btn-warn-solid:hover { background: #fbbf24; }
-        .btn-warn-solid:active { transform: scale(0.98); }
 
         /* --- Expand/collapse group (fade + slide) --- */
         .group-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .32s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -79,11 +73,15 @@
         #errorBanner { display: none; }
         #errorBanner.show { display: flex; }
 
-        /* --- Modal: fade + scale instead of hard hidden/shown --- */
-        #deleteModal { opacity: 0; pointer-events: none; transition: opacity .2s ease; }
-        #deleteModal.show { opacity: 1; pointer-events: auto; }
-        #deleteModal .modal-card { transform: scale(0.94) translateY(10px); opacity: 0; transition: transform .3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity .2s ease; }
-        #deleteModal.show .modal-card { transform: scale(1) translateY(0); opacity: 1; }
+        /* --- Tombol hapus: tong sampah, tahan untuk hapus --- */
+        .hold-del { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+            background: var(--warn-soft); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); cursor: pointer;
+            user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation;
+            transition: transform .12s ease, color .18s ease; }
+        .hold-del::before { content: ''; position: absolute; inset: 0; background: var(--warn); transform: scaleX(0); transform-origin: left; transition: transform .25s ease; }
+        .hold-del.holding::before { transform: scaleX(1); transition: transform var(--hold-ms, 700ms) linear; }
+        .hold-del.holding { color: #14100a; transform: scale(0.94); }
+        .hold-del svg { position: relative; z-index: 1; pointer-events: none; }
 
         #groupedListContainer { transition: opacity .15s ease; }
     </style>
@@ -184,21 +182,6 @@
         </div>
     </div>
 
-    <!-- POPUP MODAL HAPUS -->
-    <div id="deleteModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="modal-card porto-card w-full max-w-sm p-6 rounded-2xl border space-y-4 text-center relative" style="border-color: rgba(245,158,11,0.3);">
-            <div class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mx-auto" style="background: var(--warn-soft); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24;">⚠️</div>
-            <div>
-                <h3 class="font-display font-bold text-white text-base mb-1">Hapus / Lunas Pinjaman</h3>
-                <p id="deleteModalText" class="text-xs text-slate-400">Yakin mau hapus catatan pinjaman ini?</p>
-            </div>
-            <div class="flex gap-2 pt-2">
-                <button type="button" onclick="closeDeleteModal()" class="w-1/2 bg-[#1e2235] hover:bg-[#282d47] text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition">Batal (Esc)</button>
-                <button type="button" id="confirmDeleteBtn" class="w-1/2 btn-warn-solid text-white font-semibold py-2.5 rounded-xl text-xs focus:outline-none focus:ring-2" style="--tw-ring-color: rgba(245,158,11,0.5);">Ya, Hapus (Enter)</button>
-            </div>
-        </div>
-    </div>
-
     <!-- TOAST NOTIFICATION -->
     <div id="toast" class="px-5 py-3 rounded-2xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2">
         <span id="toastIcon"></span>
@@ -212,8 +195,6 @@
 
         let globalData = [];
         let activeTab = 'aktif'; 
-        let deleteTargetNo = null;
-        let deleteTargetPerson = null; 
         let currentSuggestion = "";
         let toastTimeout = null;
         let expandedGroups = new Set();
@@ -251,6 +232,12 @@
                 toast.style.background = "";
                 toast.style.borderColor = "";
                 toast.style.color = "";
+            } else if (type === 'info') {
+                icon.innerText = 'ℹ';
+                toast.className = "px-5 py-3 rounded-2xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2 show";
+                toast.style.background = "rgba(109,106,240,0.18)";
+                toast.style.borderColor = "rgba(109,106,240,0.45)";
+                toast.style.color = "#c7c6ff";
             } else {
                 icon.innerText = '✕';
                 toast.className = "px-5 py-3 rounded-2xl text-xs font-semibold shadow-2xl backdrop-blur-md border flex items-center gap-2 show";
@@ -490,9 +477,7 @@
                                 <span class="font-display font-bold num text-sm ${isLunas ? 'text-emerald-400' : 'text-accent'}">
                                     ${formatRupiah(data.total)}
                                 </span>
-                                <span onclick="event.stopPropagation(); openDeleteModal(event, null, '${nama.replace(/'/g, "\\'")}', null, true)" class="btn-warn-soft px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer">
-                                    Lunas / Hapus
-                                </span>
+                                <span role="button" aria-label="Tahan untuk hapus semua catatan ${nama}" title="Tahan untuk hapus / lunas" data-type="person" data-name="${encodeURIComponent(nama)}" onclick="holdClick(event)" class="hold-del w-9 h-9 rounded-lg">${trashIcon(16)}</span>
                                 <span id="chev-${key}" class="chev ${isOpen ? 'open' : ''} text-slate-500 text-xs">▼</span>
                             </div>
                         </button>
@@ -510,7 +495,7 @@
                                                 <span class="text-xs font-bold num ${item.nominal < 0 ? 'text-emerald-400' : 'text-accent'}">
                                                     ${formatRupiah(item.nominal)}
                                                 </span>
-                                                <button onclick="openDeleteModal(event, ${item.no}, '${item.peminjam}', '${formatRupiah(item.nominal)}', false)" class="text-[10px] bg-[#1e2235] text-slate-400 hover:text-amber-400 px-2 py-1 rounded transition">❌</button>
+                                                <span role="button" aria-label="Tahan untuk hapus" title="Tahan untuk hapus" data-type="item" data-no="${item.no}" onclick="holdClick(event)" class="hold-del w-8 h-8 rounded-lg">${trashIcon(14)}</span>
                                             </div>
                                         </div>
                                     `).join('')}
@@ -554,7 +539,7 @@
                             <div class="num font-bold text-sm ${isBayar ? 'text-emerald-400' : 'text-accent'} text-right w-24">
                                 ${formatRupiah(nom)}
                             </div>
-                            <button onclick="openDeleteModal(event, ${item.no}, '${item.peminjam}', '${formatRupiah(nom)}', false)" class="text-[10px] bg-[#1e2235] text-slate-400 hover:text-amber-400 px-2 py-1.5 rounded transition">❌</button>
+                            <span role="button" aria-label="Tahan untuk hapus" title="Tahan untuk hapus" data-type="item" data-no="${item.no}" onclick="holdClick(event)" class="hold-del w-8 h-8 rounded-lg">${trashIcon(14)}</span>
                         </div>
                     </div>`;
                 });
@@ -630,48 +615,64 @@
                 });
         }
 
-        function openDeleteModal(e, no, peminjam, nominalStr, isDeleteAll = false) {
-            if(e) { e.preventDefault(); e.stopPropagation(); }
-            deleteTargetNo = no;
-            deleteTargetPerson = isDeleteAll ? peminjam : null;
+        // ===== HAPUS: tahan tombol tong sampah =====
+        const HOLD_MS = 700;
+        let holdTimer = null;
+        let holdBtn = null;
+        let holdJustFired = false;
+        document.documentElement.style.setProperty('--hold-ms', HOLD_MS + 'ms');
 
-            if (isDeleteAll) {
-                document.getElementById('deleteModalText').innerText = `Yakin mau hapus/lunasin SEMUA catatan atas nama ${peminjam}? Data bakal terhapus permanen.`;
-            } else {
-                document.getElementById('deleteModalText').innerText = `Hapus catatan pinjaman ${peminjam} sebesar ${nominalStr}?`;
-            }
-
-            const modal = document.getElementById('deleteModal');
-            modal.classList.add('show');
-            setTimeout(() => document.getElementById('confirmDeleteBtn').focus(), 80);
+        function trashIcon(size) {
+            return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>`;
         }
 
-        function closeDeleteModal() {
-            deleteTargetNo = null;
-            deleteTargetPerson = null;
-            document.getElementById('deleteModal').classList.remove('show');
+        function cancelHold() {
+            if (holdTimer) clearTimeout(holdTimer);
+            holdTimer = null;
+            if (holdBtn) holdBtn.classList.remove('holding');
+            holdBtn = null;
         }
 
-        window.addEventListener('keydown', function(e) {
-            const modal = document.getElementById('deleteModal');
-            if (modal.classList.contains('show')) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    document.getElementById('confirmDeleteBtn').click();
-                } else if (e.key === 'Escape') {
-                    closeDeleteModal();
-                }
-            }
+        function holdClick(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            if (!holdJustFired) showToast('Tahan tombol tong sampah untuk menghapus', 'info');
+        }
+
+        document.addEventListener('pointerdown', function(e) {
+            const btn = e.target.closest('.hold-del');
+            if (!btn) return;
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            cancelHold();
+            holdBtn = btn;
+            btn.classList.add('holding');
+            holdTimer = setTimeout(() => {
+                const target = holdBtn;
+                holdJustFired = true;
+                setTimeout(() => { holdJustFired = false; }, 500);
+                cancelHold();
+                if (navigator.vibrate) navigator.vibrate(40);
+                runHoldDelete(target);
+            }, HOLD_MS);
+        });
+        ['pointerup', 'pointercancel'].forEach(t => document.addEventListener(t, cancelHold));
+        document.addEventListener('pointerout', function(e) {
+            if (holdBtn && !holdBtn.contains(e.relatedTarget)) cancelHold();
+        });
+        document.addEventListener('contextmenu', function(e) {
+            if (e.target.closest('.hold-del')) e.preventDefault();
         });
 
-        // LOGIKA HAPUS
-        document.getElementById('confirmDeleteBtn').onclick = async function() {
-            const targetNo = deleteTargetNo;
-            const targetPerson = deleteTargetPerson;
+        function runHoldDelete(btn) {
+            if (!btn) return;
+            if (btn.dataset.type === 'person') {
+                performDelete(null, decodeURIComponent(btn.dataset.name));
+            } else {
+                performDelete(parseInt(btn.dataset.no, 10), null);
+            }
+        }
 
-            // Simpan target dulu, baru tutup modal
-            closeDeleteModal();
-
+        async function performDelete(targetNo, targetPerson) {
             if (targetPerson) {
                 globalData = globalData.filter(item =>
                     (item.peminjam || '').toUpperCase().trim() !== targetPerson
@@ -689,7 +690,7 @@
 
                 setTimeout(loadData, 1000);
 
-            } else if (targetNo !== null) {
+            } else if (targetNo !== null && !isNaN(targetNo)) {
                 globalData = globalData.filter(item => item.no !== targetNo);
                 localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(globalData));
                 renderData();
@@ -704,7 +705,7 @@
 
                 setTimeout(loadData, 500);
             }
-        };
+        }
     </script>
 </body>
 </html>
