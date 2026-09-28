@@ -139,7 +139,7 @@
                 <div>
                     <div class="relative w-full">
                         <div id="ghostVia" class="absolute inset-0 px-3.5 py-2.5 pointer-events-none text-slate-500 font-medium whitespace-pre overflow-hidden"></div>
-                        <input type="text" id="via" aria-label="Via / Pembayaran" required placeholder="Contoh: Seabank, Dana, BCA, Cash" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="handleViaInput(this)" onkeydown="handleViaKeyDown(event, this)" onblur="acceptViaSuggestion(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 relative bg-transparent z-10">
+                        <input type="text" id="via" aria-label="Via / Pembayaran" required placeholder="QRIS, Seabank, Dana, BCA, Cash" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="handleViaInput(this)" onkeydown="handleViaKeyDown(event, this)" onblur="acceptViaSuggestion(this)" class="w-full porto-input rounded-xl px-3.5 py-2.5 relative bg-transparent z-10">
                     </div>
                 </div>
                 <div>
@@ -207,7 +207,7 @@
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbxGZZdwz313rSsFpHQrQcsoXYzhgVcgWffx_WIq-to77DDenZ16vHnBXnXp3wFgdTF4BA/exec";
         const LOCAL_STORAGE_KEY = "hutang_cached_data";
-        const VIA_OPTIONS = ["Seabank", "Dana", "BCA", "Cash", "GoPay", "QRis", "OVO", "Mandiri", "BRI", "ShopeePay"];
+        const VIA_OPTIONS = ["Seabank", "Dana", "BCA", "Cash", "GoPay", "QRIS", "OVO", "Mandiri", "BRI", "ShopeePay"];
 
         let globalData = [];
         let activeTab = 'aktif'; 
